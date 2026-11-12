@@ -148,7 +148,8 @@ public class DrawingService {
         if (plan.getBytes(StandardCharsets.UTF_8).length > maxPlan) throw new PayloadTooLargeException("도면 해석 결과가 너무 큽니다.");
         try {
             JsonNode n = json.readTree(plan);
-            if (!n.isObject() || !n.has("format") || !n.path("bounds").isObject() || !n.path("lines").isArray())
+            if (!n.isObject() || !n.has("format") || !n.path("bounds").isObject() || !n.path("bounds").path("w").isNumber()
+                    || !n.path("bounds").path("h").isNumber() || !n.path("lines").isArray())
                 throw new BadRequestException("도면 해석 결과(plan)가 올바르지 않습니다.");
             return n.toString();
         } catch (JacksonException e) {

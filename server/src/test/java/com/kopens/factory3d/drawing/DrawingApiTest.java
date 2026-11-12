@@ -31,7 +31,7 @@ class DrawingApiTest extends IntegrationTest {
                         .param("name", name).param("plan", PLAN).param("layerRules", "{}").with(OPERATOR).with(csrf()))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
-        return Long.parseLong(loc.replaceAll("^\\{\"id\":(\\d+).*$", "$1"));
+        return ((Number) com.jayway.jsonpath.JsonPath.read(loc, "$.id")).longValue();
     }
 
     @Test
@@ -84,6 +84,18 @@ class DrawingApiTest extends IntegrationTest {
         create("중복");
         mvc.perform(multipart("/api/drawings").file(file("a.dxf", DXF)).param("name", "중복").param("plan", PLAN).with(OPERATOR).with(csrf()))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.detail").value("같은 이름의 도면이 있습니다."));
+    }
+
+    @Test
+    void 숫자가_아닌_bounds_는_400() throws Exception {
+        String bad = "{\"format\":1,\"bounds\":{\"w\":\"abc\",\"h\":1},\"lines\":[]}";
+        String msg = "도면 해석 결과(plan)가 올바르지 않습니다.";
+        mvc.perform(multipart("/api/drawings").file(file("a.dxf", DXF)).param("name", "x").param("plan", bad).with(OPERATOR).with(csrf()))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(msg));
+        long id = create("bounds");
+        mvc.perform(put("/api/drawings/" + id + "/plan").contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"version\":1,\"plan\":" + bad + ",\"layerRules\":{}}").with(OPERATOR).with(csrf()))
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value(msg));
     }
 
     @Test
