@@ -18,6 +18,11 @@ const PATTERNS: [RegExp, Role][] = [
   [/EQUIP|설비|OBJECT/, 'object'],
 ]
 
+/** 역할의 기본 높이·두께 (역할을 바꿀 때 값 재설정용) */
+export function roleDefaults(role: Role): { height: number; thickness: number } {
+  return { ...DEFAULTS[role] }
+}
+
 export function defaultRule(layerName: string): Required<LayerRule> {
   const n = layerName.toUpperCase()
   const role = PATTERNS.find(([re]) => re.test(n))?.[1] ?? 'line'

@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from 'react-router'
 import { RequireAuth } from './auth/RequireAuth'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AuditPage } from './pages/admin/AuditPage'
+import { DrawingsPage } from './pages/admin/DrawingsPage'
 import { LoginHistoryPage } from './pages/admin/LoginHistoryPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { ErrorPage } from './pages/ErrorPage'
@@ -23,6 +24,7 @@ export const routes: RouteObject[] = [
       { path: 'users', element: <UsersPage /> },
       { path: 'login-history', element: <LoginHistoryPage /> },
       { path: 'audit', element: <AuditPage /> },
+      { path: 'drawings', element: <DrawingsPage /> },
     ],
   },
   { path: '*', element: <ErrorPage code="404" /> },
