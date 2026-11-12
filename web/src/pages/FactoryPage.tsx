@@ -1,6 +1,7 @@
 import { Box, Gauge, Map as MapIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { hasRole, useAuth } from '../auth/context'
+import { AddDrawingDialog } from '../drawing/AddDrawingDialog'
 import { DrawingTools } from '../drawing/DrawingTools'
 import { InfoCard } from '../drawing/InfoCard'
 import type { Plan, UnitName } from '../drawing/plan/types'
@@ -33,6 +34,7 @@ export function FactoryPage() {
   const list = drawings.kind === 'ok' ? drawings.list : []
   const selectedId = pickDrawing(list, chosen)
   const { state, save } = useDrawing(selectedId)
+  const [adding, setAdding] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   useEffect(() => {
     if (!toast) return
@@ -63,7 +65,7 @@ export function FactoryPage() {
   const plan: Plan | null = detail?.plan ?? null
   const head = (
     <>
-      <DrawingBar drawings={list} selectedId={selectedId} onSelect={select} canAdd={hasRole(user, 'OPERATOR')} onAdd={() => {}} />
+      <DrawingBar drawings={list} selectedId={selectedId} onSelect={select} canAdd={hasRole(user, 'OPERATOR')} onAdd={() => setAdding(true)} />
       <div className="seg" role="group" aria-label="보기">
         <button className={pref.mode === '3d' ? 'on' : ''} aria-pressed={pref.mode === '3d'} onClick={() => setPref({ ...pref, mode: '3d' })}>
           <Box size={14} aria-hidden /> 3D 보기
@@ -97,6 +99,7 @@ export function FactoryPage() {
           )}
         </>
       )}
+      {adding && <AddDrawingDialog onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); select(id); retry() }} />}
     </AppShell>
   )
 }
