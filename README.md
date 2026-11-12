@@ -19,6 +19,12 @@ cd web && npm run dev               # http://localhost:5200 (화면, /api 는 80
 ```
 처음 실행하면 관리자 `admin` 이 만들어집니다. 비밀번호는 환경 변수 `F3D_ADMIN_PASSWORD`, 비우면 서버 로그에 한 번 출력. 첫 로그인 때 변경해야 합니다.
 
+### 도면
+- 처음 실행하면 기본 도면 '나셀 공장'(demo 의 main_factory.dxf)이 들어갑니다.
+- DXF(ASCII)만 올릴 수 있습니다. DWG 는 ODA File Converter 로 변환하세요.
+- 레이어 이름으로 역할을 정합니다: PARTITION/칸막이/가벽 → 낮은 가벽(1.2m), WALL/벽 → 외벽(8m), COLUMN/기둥 → H빔, STATION/ZONE/구역 → 구역, EQUIP/설비 → 객체 표기. 관리자 › 도면 관리에서 도면마다 바꿀 수 있습니다.
+- 해석기(web/src/drawing)를 바꾸면 `cd web && npm run seed:plan` 으로 기본 도면 plan 을 다시 만드세요.
+
 ## 배포 (jar 하나 + PostgreSQL)
 ```
 cd server && ./gradlew bootJar      # build/libs/factory3d.jar (화면 포함)
@@ -38,4 +44,5 @@ java -jar build/libs/factory3d.jar  # Java 21 필요
 cd server && ./gradlew test         # 테스트 DB factory3d_test 를 매번 비우고 씀
 cd web && npm test
 cd web && node e2e/p1-smoke.mjs http://localhost:8080 <처음 비밀번호> <새 비밀번호>   # 깨끗한 DB 의 실행 중인 서버로 (Microsoft Edge 필요)
+cd web && node e2e/p2-smoke.mjs http://localhost:8080 admin <비밀번호>   # 비밀번호 변경을 마친 계정으로: 3D·도면 보기·측정·도면 추가·도면 관리
 ```

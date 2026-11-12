@@ -25,9 +25,9 @@ await page.getByLabel('새 비밀번호', { exact: true }).fill(next)
 await page.getByLabel('새 비밀번호 확인').fill(next)
 await page.getByRole('button', { name: /비밀번호 바꾸기/ }).click()
 await page.waitForURL((u) => u.pathname === '/')
-await page.getByText('등록된 도면이 없습니다').waitFor()
+await page.locator('.info-card strong', { hasText: '나셀 공장' }).waitFor() // P2: 기본 도면이 처음 실행 때 들어감
 await page.screenshot({ path: 'e2e/shots/2-factory.png' })
-if (!(await page.getByRole('combobox', { name: '도면 선택' }).isDisabled())) fail('도면이 없는데 select 가 켜져 있음')
+if (await page.getByRole('combobox', { name: '도면 선택' }).isDisabled()) fail('기본 도면이 있는데 select 가 꺼져 있음')
 
 await page.getByRole('button', { name: '관리자', exact: true }).click()
 await page.waitForURL(/\/admin\/users/)
