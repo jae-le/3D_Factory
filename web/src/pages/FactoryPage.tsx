@@ -1,6 +1,7 @@
 import { Box, Gauge, Map as MapIcon } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { hasRole, useAuth } from '../auth/context'
+import { DrawingTools } from '../drawing/DrawingTools'
 import { InfoCard } from '../drawing/InfoCard'
 import type { Plan, UnitName } from '../drawing/plan/types'
 import { useDrawing } from '../drawing/useDrawing'
@@ -28,10 +29,16 @@ export function FactoryPage() {
   const [drawings, retry] = useDrawings()
   const [chosen, setChosen] = useState<number | null>(() => (user ? loadStored(user.username) : null))
   const [pref, setPref] = useState<ViewPref>(loadView)
-  const [, setScene] = useState<PickSource | null>(null)
+  const [scene, setScene] = useState<PickSource | null>(null)
   const list = drawings.kind === 'ok' ? drawings.list : []
   const selectedId = pickDrawing(list, chosen)
-  const { state } = useDrawing(selectedId)
+  const { state, save } = useDrawing(selectedId)
+  const [toast, setToast] = useState<string | null>(null)
+  useEffect(() => {
+    if (!toast) return
+    const t = setTimeout(() => setToast(null), 3500)
+    return () => clearTimeout(t)
+  }, [toast])
   useEffect(() => {
     try {
       localStorage.setItem('f3d:view', JSON.stringify(pref))
@@ -46,6 +53,13 @@ export function FactoryPage() {
     if (user) saveStored(user.username, id)
   }
   const detail = state.kind === 'ok' && state.detail.id === selectedId ? state.detail : null
+  const onSave = async (p: Plan) => {
+    try {
+      if ((await save(p)) === 'conflict') setToast('다른 사람이 먼저 수정했습니다. 다시 불러옵니다.')
+    } catch (e) {
+      setToast((e as Error).message)
+    }
+  }
   const plan: Plan | null = detail?.plan ?? null
   const head = (
     <>
@@ -76,6 +90,8 @@ export function FactoryPage() {
         <>
           <FactoryView plan={plan} planKey={detail?.id} view={pref.mode} quality={pref.quality} onScene={setScene} />
           {state.kind === 'error' && <p className="empty-state" role="alert">{state.error.message}</p>}
+          {detail && <DrawingTools scene={scene} plan={detail.plan} canEdit={hasRole(user, 'OPERATOR')} onSave={onSave} />}
+          {toast && <p className="toast" role="status">{toast}</p>}
           {detail && (
             <InfoCard name={detail.name} plan={detail.plan} calibrated={Math.abs(detail.plan.scale - UNIT_SCALE[detail.plan.unit]) > 1e-9} />
           )}

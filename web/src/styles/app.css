@@ -77,3 +77,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* 3D 위 정보 카드 (왼쪽 아래) */
 .info-card { position: absolute; left: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: color-mix(in srgb, var(--panel) 88%, transparent); font-size: var(--kp-text-13); color: var(--muted); }
 .info-card strong { color: var(--text); font-size: var(--kp-text-14); }
+
+/* 3D 위 도구줄 (오른쪽 위) */
+.tool-bar { position: absolute; top: 12px; right: 12px; display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; max-width: calc(100% - 24px); }
+.tool-bar > button { display: flex; align-items: center; gap: 6px; height: var(--kp-h-xs); padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: color-mix(in srgb, var(--panel) 88%, transparent); color: var(--text); font-size: var(--kp-text-13); }
+.tool-bar > button:hover { background: var(--panel); }
+.tool-bar > button.on { border-color: var(--primary); color: #9cc3ff; }
+.tool-hint { flex-basis: 100%; margin: 0; text-align: right; font-size: var(--kp-text-13); color: var(--text); }
+.toast { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); margin: 0; padding: 8px 14px; border-radius: var(--kp-radius-sm); background: #000c; color: #fff; font-size: var(--kp-text-13); }

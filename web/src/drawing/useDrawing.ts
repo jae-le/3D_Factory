@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../api/client'
 import { getDrawing, savePlan, type DrawingDetail } from './api'
 import type { LayerRules, Plan } from './plan/types'
@@ -13,6 +13,10 @@ export type DrawingState =
 export function useDrawing(id: number | null) {
   const [state, setState] = useState<DrawingState>({ kind: 'idle' })
   const [tick, setTick] = useState(0)
+  const idRef = useRef(id)
+  useEffect(() => {
+    idRef.current = id
+  }, [id])
   useEffect(() => {
     if (id == null) return
     let cancel = false
@@ -30,11 +34,11 @@ export function useDrawing(id: number | null) {
       const d = state.detail
       try {
         const next = await savePlan(d.id, d.version, plan, layerRules ?? d.layerRules)
-        setState({ kind: 'ok', detail: next })
+        if (idRef.current === d.id) setState({ kind: 'ok', detail: next })
         return 'ok'
       } catch (e) {
         if (e instanceof ApiError && e.kind === 'conflict') {
-          reload()
+          if (idRef.current === d.id) reload()
           return 'conflict'
         }
         throw e

@@ -372,6 +372,7 @@ export class FactoryScene implements PickSource {
     const d = this.downAt
     this.downAt = null
     if (!d || !this.onPick) return
+    if (ev.detail >= 2) return // 더블클릭의 둘째 클릭은 카메라 이동만
     if (Math.hypot(ev.clientX - d.x, ev.clientY - d.y) >= CLICK_PX) return // 드래그 회전은 클릭 아님
     const p = this.pickPlan(ev)
     if (p) this.onPick(p)
