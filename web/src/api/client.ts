@@ -34,14 +34,14 @@ const KIND: Record<number, ApiErrorKind> = {
 /** 로그인이 풀렸음을 화면 전체에 알림 (AuthProvider 가 듣고 로그인 화면으로) */
 export const UNAUTHORIZED_EVENT = 'f3d:unauthorized'
 
-async function handle<T>(url: string, send: () => Promise<Response>): Promise<T> {
+async function handle<T>(url: string, send: () => Promise<Response>, read: (r: Response) => Promise<T> = (r) => r.json() as Promise<T>): Promise<T> {
   let r: Response
   try {
     r = await send()
   } catch {
     throw new ApiError('network', null, '서버에 연결할 수 없습니다.')
   }
-  if (r.ok) return (r.status === 204 ? undefined : await r.json()) as T
+  if (r.ok) return (r.status === 204 ? undefined : await read(r)) as T
   const body = (await r.json().catch(() => null)) as { detail?: string } | null
   const kind: ApiErrorKind = UNREACHABLE.has(r.status)
     ? 'network'
@@ -59,6 +59,11 @@ export function apiErrorOf(status: number, detail: string | undefined): ApiError
 
 export function apiJson<T>(url: string): Promise<T> {
   return handle<T>(url, () => fetch(url))
+}
+
+/** 파일 바이트 받기 (도면 원본) */
+export function apiBuffer(url: string): Promise<ArrayBuffer> {
+  return handle<ArrayBuffer>(url, () => fetch(url), (r) => r.arrayBuffer())
 }
 
 /** 쿠키 XSRF-TOKEN (서버가 응답마다 내려줌) — 바꾸는 요청에 머리 X-XSRF-TOKEN 으로 */

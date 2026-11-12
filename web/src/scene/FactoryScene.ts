@@ -65,6 +65,7 @@ export class FactoryScene implements PickSource {
   private markLineMat = new THREE.LineBasicMaterial({ color: MARK_COLOR })
   private meshes: PlanMeshes | null = null
   private plan: Plan | null = null
+  private planKey: string | number | undefined
   private span = 50
   private mode: ViewMode = '3d'
   private quality: Quality = 'high'
@@ -139,8 +140,11 @@ export class FactoryScene implements PickSource {
     renderer.setAnimationLoop(this.tick)
   }
 
-  setPlan(plan: Plan | null): void {
+  /** key 가 바뀌면(다른 도면) 카메라 초기화, 같은 key 의 보정·회전 갱신은 카메라 유지 */
+  setPlan(plan: Plan | null, key?: string | number): void {
     const prev = this.plan
+    const prevKey = this.planKey
+    this.planKey = key
     if (this.meshes) {
       this.root.remove(this.meshes.group)
       disposeGroup(this.meshes.group)
@@ -169,8 +173,8 @@ export class FactoryScene implements PickSource {
     this.grid.position.y = -0.005
     this.scene.add(this.grid)
 
-    // 카메라는 도면이 바뀔 때만 초기화 (같은 도면의 회전·보정 저장 때는 유지)
-    if (!prev || prev.bounds.w !== plan.bounds.w || prev.bounds.h !== plan.bounds.h) this.resetCamera()
+    // 카메라는 도면(key)이 바뀔 때만 초기화 (같은 도면의 회전·보정 저장 때는 유지)
+    if (!prev || prevKey !== key) this.resetCamera()
     this.applyLook()
   }
 

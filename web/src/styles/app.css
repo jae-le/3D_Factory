@@ -64,3 +64,16 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* 관리자 표 위 조회 조건 줄 */
 .kp-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--kp-sp-12); margin-bottom: var(--kp-sp-16); }
 .kp-filter .kp-field { min-width: 160px; }
+
+/* 3D 화면 */
+.factory-view { position: absolute; inset: 0; }
+.factory-view canvas { display: block; }
+
+/* 보기 전환 (붙은 버튼 두 개) */
+.seg { display: inline-flex; padding: 2px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: #ffffff08; }
+.seg button { display: flex; align-items: center; gap: 6px; height: calc(var(--kp-h-xs) - 6px); padding: 0 10px; border: 0; border-radius: var(--kp-radius-xs); background: none; color: var(--muted); font-size: var(--kp-text-13); }
+.seg button.on { background: color-mix(in srgb, var(--primary) 25%, transparent); color: #fff; }
+
+/* 3D 위 정보 카드 (왼쪽 아래) */
+.info-card { position: absolute; left: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 2px; padding: 10px 14px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: color-mix(in srgb, var(--panel) 88%, transparent); font-size: var(--kp-text-13); color: var(--muted); }
+.info-card strong { color: var(--text); font-size: var(--kp-text-14); }

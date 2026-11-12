@@ -39,5 +39,9 @@ export interface DrawingSummary {
   id: number
   name: string
   sourceType: 'dxf' | 'image'
+  version: number
+  createdBy: string | null
   updatedAt: string
+  width: number | null
+  height: number | null
 }

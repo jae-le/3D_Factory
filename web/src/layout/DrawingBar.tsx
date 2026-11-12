@@ -6,10 +6,11 @@ interface Props {
   selectedId: number | null
   onSelect: (id: number) => void
   canAdd: boolean
+  onAdd: () => void
 }
 
-/** 머리글 왼쪽: 도면 select + 도면 추가 (추가는 P2 에서 열림) */
-export function DrawingBar({ drawings, selectedId, onSelect, canAdd }: Props) {
+/** 머리글 왼쪽: 도면 select + 도면 추가 */
+export function DrawingBar({ drawings, selectedId, onSelect, canAdd, onAdd }: Props) {
   return (
     <div className="drawing-bar">
       <label className="drawing-select">
@@ -32,7 +33,7 @@ export function DrawingBar({ drawings, selectedId, onSelect, canAdd }: Props) {
         </select>
       </label>
       {canAdd && (
-        <button className="bar-btn" disabled title="도면 추가 — 다음 단계(P2)에서 제공">
+        <button className="bar-btn" onClick={onAdd}>
           <Plus size={16} aria-hidden />
           도면 추가
         </button>

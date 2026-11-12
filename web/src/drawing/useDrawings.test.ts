@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import type { DrawingSummary } from '../api/types'
 import { loadStored, pickDrawing, saveStored } from './useDrawings'
 
-const d = (id: number): DrawingSummary => ({ id, name: `도면 ${id}`, sourceType: 'dxf', updatedAt: '2026-11-12T00:00:00Z' })
+const d = (id: number): DrawingSummary => ({ id, name: `도면 ${id}`, sourceType: 'dxf', version: 1, createdBy: null, updatedAt: '2026-11-12T00:00:00Z', width: null, height: null })
 
 describe('도면 선택', () => {
   afterEach(() => localStorage.clear())
