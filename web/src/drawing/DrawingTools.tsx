@@ -12,7 +12,7 @@ interface Props {
   scene: PickSource | null
   plan: Plan
   canEdit: boolean
-  onSave: (plan: Plan) => Promise<void>
+  onSave: (plan: Plan, opts?: { scaleFactor?: number }) => Promise<void>
   /** 측정·보정 도구가 켜지고 꺼질 때 (객체 배치·편집을 끝내게) */
   onToolChange?: (active: boolean) => void
 }
@@ -55,16 +55,16 @@ export function DrawingTools({ scene, plan, canEdit, onSave, onToolChange }: Pro
     setTool(t)
   }
   const measured = picks.length === 2 ? dist(picks[0], picks[1]) : null
-  const saving = (p: Plan) => {
+  const saving = (p: Plan, opts?: { scaleFactor?: number }) => {
     setBusy(true)
-    return onSave(p).finally(() => setBusy(false))
+    return (opts ? onSave(p, opts) : onSave(p)).finally(() => setBusy(false))
   }
   const apply = async (e: FormEvent) => {
     e.preventDefault()
     if (busy) return
     try {
       const next = calibrate(plan, measured ?? 0, Number(actual))
-      await saving(next)
+      await saving(next, { scaleFactor: Number(actual) / (measured ?? 0) })
       stop()
     } catch (err) {
       setError((err as Error).message)

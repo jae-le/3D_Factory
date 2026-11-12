@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AddDrawingDialog } from './AddDrawingDialog'
-import { dxfText, line, rect } from './dxf/testDxf'
+import { dxfText, line, rect, text } from './dxf/testDxf'
 
 const json = (status: number, body: unknown) => ({ ok: status < 400, status, json: async () => body })
 const dxfFile = (text: string, name = '2공장.dxf') => new File([text], name, { type: 'application/dxf' })
@@ -24,13 +24,45 @@ describe('도면 추가 창', () => {
     expect(screen.getByLabelText('도면 이름')).toHaveValue('2공장')
     expect(screen.queryByLabelText('단위')).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '등록' }))
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(7))
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(7, undefined, undefined))
     const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit]
     expect(url).toBe('/api/drawings')
     const form = init.body as FormData
     expect(form.get('name')).toBe('2공장')
     expect(JSON.parse(String(form.get('plan'))).partitions).toHaveLength(1)
     expect((form.get('file') as File).name).toBe('2공장.dxf')
+  })
+
+  it('표기가 있으면 모델을 받아 자동 배치하고 결과를 넘김', async () => {
+    const model = { id: 1, name: '허브', category: 'equipment', sourceExt: 'glb', sizeX: 1, sizeY: 1, sizeZ: 1, aliases: ['HUB'], version: 1, usedDrawings: 0, updatedAt: '' }
+    const fetch = vi.fn(async (url: string) => {
+      if (url === '/api/models') return json(200, [model])
+      if (url === '/api/drawings/7/placements') return json(201, [])
+      return json(201, { id: 7 })
+    })
+    vi.stubGlobal('fetch', fetch)
+    const onCreated = vi.fn()
+    render(<AddDrawingDialog onClose={vi.fn()} onCreated={onCreated} />)
+    pick(dxfFile(dxfText({ insunits: 4, ents: [line('WALL', 0, 0, 20000, 0), text('EQUIP', 1000, 1000, 300, 'HUB'), text('EQUIP', 2000, 1000, 300, 'PUMP')] })))
+    await screen.findByText(/객체 표기 2/)
+    fireEvent.click(screen.getByRole('button', { name: '등록' }))
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(7, { count: 2, unmatched: 1 }, undefined))
+    const call = (fetch.mock.calls as unknown as [string, RequestInit][]).find(([u]) => u === '/api/drawings/7/placements')!
+    const body = JSON.parse(String(call[1].body))
+    expect(body).toHaveLength(2)
+    expect(body[0]).toMatchObject({ modelId: 1, name: '허브 1', hintLabel: 'HUB' })
+    expect(body[1]).toMatchObject({ modelId: null, name: '표기 PUMP' })
+  })
+
+  it('자동 배치가 실패해도 등록은 성공, 오류 메시지를 따로 넘김', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (url === '/api/models' ? json(500, { detail: '서버 오류' }) : json(201, { id: 7 }))))
+    const onCreated = vi.fn()
+    render(<AddDrawingDialog onClose={vi.fn()} onCreated={onCreated} />)
+    pick(dxfFile(dxfText({ insunits: 4, ents: [line('WALL', 0, 0, 20000, 0), text('EQUIP', 1000, 1000, 300, 'HUB')] })))
+    await screen.findByText(/객체 표기 1/)
+    fireEvent.click(screen.getByRole('button', { name: '등록' }))
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(7, undefined, expect.any(String)))
+    expect(screen.queryByText('서버 오류')).toBeNull()
   })
 
   it('단위 추정이면 안내와 단위 선택, 바꾸면 크기 다시 계산', async () => {

@@ -11,7 +11,7 @@ const ADMIN: User = { id: 1, username: 'admin', displayName: '관리자', role: 
 const json = (status: number, body: unknown) => ({ ok: status < 400, status, json: async () => body, arrayBuffer: async () => new ArrayBuffer(0) })
 const SRC = dxfText({ insunits: 4, ents: [line('WALL', 0, 0, 10000, 0), line('외곽', 0, 0, 0, 5000)] })
 const PLAN = interpretDxf(SRC)
-const LIST = [{ id: 1, name: '나셀 공장', sourceType: 'dxf', version: 2, createdBy: 'system', updatedAt: '2026-11-12T00:00:00Z', width: 10, height: 5 }]
+const LIST = [{ id: 1, name: '나셀 공장', sourceType: 'dxf', version: 2, createdBy: 'system', updatedAt: '2026-11-12T00:00:00Z', width: 10, height: 5, placements: 79 }]
 
 function show(handler: (url: string, init?: RequestInit) => unknown) {
   const fetch = vi.fn(async (url: string, init?: RequestInit) => {
@@ -71,7 +71,7 @@ describe('관리자 › 도면 관리', () => {
     fireEvent.click(screen.getByRole('button', { name: '저장' }))
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/drawings/1', expect.objectContaining({ method: 'PATCH' })))
     fireEvent.click(await screen.findByRole('button', { name: '나셀 공장 삭제' }))
-    expect(screen.getByText(/원본 파일까지 삭제됩니다/)).toBeInTheDocument()
+    expect(screen.getByText(/배치된 객체 79개도 함께 삭제됩니다/)).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: '삭제' }))
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/drawings/1', expect.objectContaining({ method: 'DELETE' })))
   })

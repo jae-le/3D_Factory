@@ -1,5 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Modal } from '../components/Modal'
+import { createPlacements, listModels } from '../objects/api'
+import { hintsToPlacements } from '../objects/match'
 import { createDrawing } from './api'
 import { interpretDxf } from './plan/interpret'
 import type { Plan, UnitName } from './plan/types'
@@ -12,7 +14,7 @@ const bytesOf = (file: File): Promise<ArrayBuffer> =>
   typeof file.arrayBuffer === 'function' ? file.arrayBuffer() : new Response(file).arrayBuffer()
 
 /** 도면 추가: DXF 선택 → 브라우저에서 해석·미리보기 → 등록 */
-export function AddDrawingDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number) => void }) {
+export function AddDrawingDialog({ onClose, onCreated }: { onClose: () => void; onCreated: (id: number, placed?: { count: number; unmatched: number }, placeError?: string) => void }) {
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [name, setName] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,7 +52,18 @@ export function AddDrawingDialog({ onClose, onCreated }: { onClose: () => void; 
     setError(null)
     try {
       const d = await createDrawing(loaded.file, name, loaded.plan, {})
-      onCreated(d.id)
+      let placed: { count: number; unmatched: number } | undefined
+      let placeError: string | undefined
+      if (loaded.plan.objectHints.length > 0) {
+        try {
+          const { items, unmatched } = hintsToPlacements(loaded.plan.objectHints, await listModels(), [])
+          await createPlacements(d.id, items)
+          placed = { count: items.length, unmatched }
+        } catch (pe) {
+          placeError = (pe as Error).message
+        }
+      }
+      onCreated(d.id, placed, placeError)
     } catch (err) {
       setError((err as Error).message)
     } finally {

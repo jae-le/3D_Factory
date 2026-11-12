@@ -107,7 +107,7 @@ export function DrawingsPage() {
       {dialog?.kind === 'rules' && <LayerRulesDialog id={dialog.d.id} onClose={() => setDialog(null)} onSaved={done} />}
       {dialog?.kind === 'delete' && (
         <Modal title="도면 삭제" onClose={() => setDialog(null)}>
-          <p className="kp-desc">{`'${dialog.d.name}' 도면을 삭제합니다. 원본 파일까지 삭제됩니다.`}</p>
+          <p className="kp-desc">{`'${dialog.d.name}' 도면을 삭제합니다. ${dialog.d.placements > 0 ? `원본 파일과 배치된 객체 ${dialog.d.placements}개도 함께 삭제됩니다.` : '원본 파일까지 삭제됩니다.'}`}</p>
           {dialogError && <p className="kp-error-text" role="alert">{dialogError}</p>}
           <div className="kp-modal-actions">
             <button type="button" className="kp-btn kp-btn-stroke" onClick={() => setDialog(null)}>취소</button>

@@ -44,4 +44,5 @@ export interface DrawingSummary {
   updatedAt: string
   width: number | null
   height: number | null
+  placements: number
 }

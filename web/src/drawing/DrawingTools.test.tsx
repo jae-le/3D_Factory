@@ -48,7 +48,7 @@ describe('도면 도구', () => {
 
   it('스케일 보정: 두 점(5m) 에 실제 10m → 2배로 저장', async () => {
     const s = fakeScene()
-    const onSave = vi.fn(async () => {})
+    const onSave = vi.fn(async (_p: Plan, _o?: { scaleFactor?: number }) => {})
     render(<DrawingTools scene={s} plan={plan} canEdit onSave={onSave} />)
     fireEvent.click(screen.getByRole('button', { name: /스케일 보정/ }))
     s.click(0, 0)
@@ -59,6 +59,7 @@ describe('도면 도구', () => {
     const saved = (onSave.mock.calls[0] as unknown as [Plan])[0]
     expect(saved.bounds.w).toBeCloseTo(40)
     expect(saved.scale).toBeCloseTo(0.002)
+    expect(onSave.mock.calls[0][1]).toEqual({ scaleFactor: 2 })
   })
 
   it('보정 거리가 0 이하면 저장 안 함', async () => {

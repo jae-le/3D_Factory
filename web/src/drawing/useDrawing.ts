@@ -29,11 +29,11 @@ export function useDrawing(id: number | null) {
   }, [id, tick])
   const reload = useCallback(() => setTick((n) => n + 1), [])
   const save = useCallback(
-    async (plan: Plan, layerRules?: LayerRules): Promise<'ok' | 'conflict'> => {
+    async (plan: Plan, layerRules?: LayerRules, scaleFactor?: number): Promise<'ok' | 'conflict'> => {
       if (state.kind !== 'ok') return 'conflict'
       const d = state.detail
       try {
-        const next = await savePlan(d.id, d.version, plan, layerRules ?? d.layerRules)
+        const next = await savePlan(d.id, d.version, plan, layerRules ?? d.layerRules, scaleFactor)
         if (idRef.current === d.id) setState({ kind: 'ok', detail: next })
         return 'ok'
       } catch (e) {

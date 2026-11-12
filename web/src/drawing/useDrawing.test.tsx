@@ -39,6 +39,15 @@ describe('useDrawing', () => {
     expect(r).toBe('conflict')
     await waitFor(() => expect(result.current.state).toMatchObject({ kind: 'ok', detail: { version: 5 } }))
   })
+  it('save 의 세 번째 인자 scaleFactor 를 PUT body 에 포함', async () => {
+    const fetch = vi.fn(async () => json(200, detail(1)))
+    vi.stubGlobal('fetch', fetch)
+    const { result } = renderHook(() => useDrawing(1))
+    await waitFor(() => expect(result.current.state.kind).toBe('ok'))
+    await act(async () => { await result.current.save({ format: 1, rotQ: 1 } as never, undefined, 2) })
+    const put = (fetch.mock.calls as unknown as [string, RequestInit][]).find(([, i]) => i?.method === 'PUT')!
+    expect(JSON.parse(String(put[1].body)).scaleFactor).toBe(2)
+  })
   it('PUT 진행 중 도면이 바뀌면 새 도면 상태를 덮어쓰지 않음', async () => {
     let release: () => void = () => {}
     const fetch = vi.fn(async (url: string, init?: RequestInit) => {

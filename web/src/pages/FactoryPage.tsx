@@ -186,9 +186,11 @@ export function FactoryPage() {
     setChosen(id)
     if (user) saveStored(user.username, id)
   }
-  const onSave = async (p: Plan) => {
+  const onSave = async (p: Plan, opts?: { scaleFactor?: number }) => {
     try {
-      if ((await save(p)) === 'conflict') setToast('다른 사람이 먼저 수정했습니다. 다시 불러옵니다.')
+      const r = await save(p, undefined, opts?.scaleFactor)
+      if (r === 'conflict') setToast('다른 사람이 먼저 수정했습니다. 다시 불러옵니다.')
+      else if (opts?.scaleFactor != null) placements.reload()
     } catch (e) {
       setToast((e as Error).message)
     }
@@ -313,7 +315,13 @@ export function FactoryPage() {
           )}
         </>
       )}
-      {adding && <AddDrawingDialog onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); select(id); void refresh() }} />}
+      {adding && <AddDrawingDialog onClose={() => setAdding(false)} onCreated={(id, placed, placeError) => {
+          setAdding(false)
+          select(id)
+          void refresh()
+          if (placed) setToast(placed.unmatched > 0 ? `객체 ${placed.count}개 배치 (모델 없음 ${placed.unmatched}개)` : `객체 ${placed.count}개 배치`)
+          else if (placeError) setToast(`객체 자동 배치에 실패했습니다: ${placeError}`)
+        }} />}
       {addingModel && (
         <AddModelDialog
           onClose={() => setAddingModel(false)}

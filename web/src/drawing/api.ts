@@ -25,7 +25,7 @@ export function createDrawing(file: File, name: string, plan: Plan, layerRules: 
   return apiSendForm<DrawingDetail>('POST', '/api/drawings', f)
 }
 
-export const savePlan = (id: number, version: number, plan: Plan, layerRules: LayerRules) =>
-  apiSend<DrawingDetail>('PUT', `/api/drawings/${id}/plan`, { version, plan, layerRules })
+export const savePlan = (id: number, version: number, plan: Plan, layerRules: LayerRules, scaleFactor?: number) =>
+  apiSend<DrawingDetail>('PUT', `/api/drawings/${id}/plan`, scaleFactor == null ? { version, plan, layerRules } : { version, plan, layerRules, scaleFactor })
 export const renameDrawing = (id: number, name: string) => apiSend<DrawingDetail>('PATCH', `/api/drawings/${id}`, { name })
 export const deleteDrawing = (id: number) => apiSend<void>('DELETE', `/api/drawings/${id}`)
