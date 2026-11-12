@@ -7,6 +7,7 @@ import com.kopens.factory3d.common.DataDir;
 import com.kopens.factory3d.common.ForbiddenException;
 import com.kopens.factory3d.common.NotFoundException;
 import com.kopens.factory3d.common.PayloadTooLargeException;
+import com.kopens.factory3d.placement.PlacementMapper;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
@@ -34,16 +35,18 @@ public class DrawingService {
     private final DrawingMapper drawings;
     private final DataDir dataDir;
     private final AuditService audit;
+    private final PlacementMapper placements;
     private final ObjectMapper json;
     private final long maxSource;
     private final long maxPlan;
 
-    public DrawingService(DrawingMapper drawings, DataDir dataDir, AuditService audit, ObjectMapper json,
+    public DrawingService(DrawingMapper drawings, DataDir dataDir, AuditService audit, PlacementMapper placements, ObjectMapper json,
             @Value("${factory3d.drawing.max-source-bytes:52428800}") long maxSource,
             @Value("${factory3d.drawing.max-plan-bytes:20971520}") long maxPlan) {
         this.drawings = drawings;
         this.dataDir = dataDir;
         this.audit = audit;
+        this.placements = placements;
         this.json = json;
         this.maxSource = maxSource;
         this.maxPlan = maxPlan;
@@ -94,7 +97,7 @@ public class DrawingService {
     }
 
     @Transactional
-    public DrawingDetail savePlan(long id, Integer version, JsonNode plan, JsonNode layerRules, boolean admin) {
+    public DrawingDetail savePlan(long id, Integer version, JsonNode plan, JsonNode layerRules, Double scaleFactor, boolean admin) {
         DrawingDetail cur = get(id);
         if (version == null) throw new BadRequestException("버전이 필요합니다.");
         String p = checkPlan(plan == null ? null : plan.toString());
@@ -102,7 +105,9 @@ public class DrawingService {
         // 레이어 규칙은 관리자만 (운전원의 보정·회전 저장은 같은 규칙을 그대로 보냄)
         if (!admin && !json.readTree(r).equals(json.readTree(checkRules(cur.layerRules()))))
             throw new ForbiddenException("레이어 규칙은 관리자만 바꿀 수 있습니다.");
+        if (scaleFactor != null && !(scaleFactor > 0 && Double.isFinite(scaleFactor))) throw new BadRequestException("배율은 0보다 커야 합니다.");
         if (drawings.updatePlan(id, version, p, r) == 0) throw new ConflictException("다른 사람이 먼저 수정했습니다.");
+        if (scaleFactor != null && Math.abs(scaleFactor - 1) > 1e-12) placements.scale(id, scaleFactor);
         audit.log("DRAWING_UPDATE", get(id).name(), "id=" + id + " version=" + (version + 1));
         return get(id);
     }

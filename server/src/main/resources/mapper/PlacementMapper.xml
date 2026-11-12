@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.placement.PlacementMapper">
+
+    <resultMap id="view" type="com.kopens.factory3d.placement.PlacementView">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="model_id" javaType="java.lang.Long"/>
+            <arg column="name" javaType="String"/>
+            <arg column="x" javaType="_double"/>
+            <arg column="y" javaType="_double"/>
+            <arg column="rot" javaType="_double"/>
+            <arg column="hint_label" javaType="String"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findByDrawing" resultMap="view">
+        select id, model_id, name, x, y, rot, hint_label from placement where drawing_id = #{drawingId} order by id
+    </select>
+    <select id="findById" resultMap="view">select id, model_id, name, x, y, rot, hint_label from placement where id = #{id}</select>
+    <select id="drawingOf" resultType="java.lang.Long">select drawing_id from placement where id = #{id}</select>
+    <select id="countByDrawing" resultType="_int">select count(*) from placement where drawing_id = #{drawingId}</select>
+    <select id="countNames" resultType="_int">
+        select count(*) from placement where drawing_id = #{drawingId} and name in
+        <foreach collection="names" item="n" open="(" separator="," close=")">#{n}</foreach>
+        <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="row.id" keyColumn="id">
+        insert into placement (drawing_id, model_id, name, x, y, rot, hint_label)
+        values (#{drawingId}, #{row.modelId,jdbcType=BIGINT}, #{row.name}, #{row.x}, #{row.y}, #{row.rot}, #{row.hintLabel,jdbcType=VARCHAR})
+    </insert>
+
+    <update id="update">
+        update placement set model_id = #{modelId,jdbcType=BIGINT}, name = #{name}, x = #{x}, y = #{y}, rot = #{rot}, updated_at = now()
+        where id = #{id}
+    </update>
+
+    <update id="scale">update placement set x = x * #{k}, y = y * #{k}, updated_at = now() where drawing_id = #{drawingId}</update>
+
+    <delete id="delete">delete from placement where id = #{id}</delete>
+</mapper>

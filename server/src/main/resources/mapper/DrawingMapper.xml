@@ -12,6 +12,7 @@
             <arg column="updated_at" javaType="java.time.OffsetDateTime"/>
             <arg column="width" javaType="Double"/>
             <arg column="height" javaType="Double"/>
+            <arg column="placements" javaType="_int"/>
         </constructor>
     </resultMap>
 
@@ -32,7 +33,8 @@
 
     <select id="findAll" resultMap="summary">
         select id, name, source_type, version, created_by, updated_at,
-               (plan -> 'bounds' ->> 'w')::float8 as width, (plan -> 'bounds' ->> 'h')::float8 as height
+               (plan -> 'bounds' ->> 'w')::float8 as width, (plan -> 'bounds' ->> 'h')::float8 as height,
+               (select count(*) from placement p where p.drawing_id = drawing.id) as placements
         from drawing order by id
     </select>
 

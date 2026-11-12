@@ -18,7 +18,7 @@ import tools.jackson.databind.JsonNode;
 @RestController
 @RequestMapping("/api/drawings")
 public class DrawingController {
-    public record PlanSave(Integer version, JsonNode plan, JsonNode layerRules) {}
+    public record PlanSave(Integer version, JsonNode plan, JsonNode layerRules, Double scaleFactor) {}
 
     public record Rename(String name) {}
 
@@ -56,7 +56,7 @@ public class DrawingController {
 
     @PutMapping("/{id}/plan")
     public DrawingDetail savePlan(@PathVariable long id, @RequestBody PlanSave body, Authentication auth) {
-        return drawings.savePlan(id, body.version(), body.plan(), body.layerRules(), isAdmin(auth));
+        return drawings.savePlan(id, body.version(), body.plan(), body.layerRules(), body.scaleFactor(), isAdmin(auth));
     }
 
     private static boolean isAdmin(Authentication auth) {
