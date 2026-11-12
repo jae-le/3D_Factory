@@ -80,6 +80,34 @@ describe('usePlacements', () => {
     expect(result.current.error).toBe('같은 이름의 객체가 이 도면에 있습니다.')
   })
 
+  it('빠르게 두 번 되돌려도 순서대로 처리 (삭제 되돌린 새 id 로 회전 되돌리기)', async () => {
+    const s = fakeServer()
+    vi.stubGlobal('fetch', s.fetch)
+    const { result } = renderHook(() => usePlacements(3))
+    await waitFor(() => expect(result.current.list).toHaveLength(1))
+    await act(() => result.current.update(1, { rot: 90 }))
+    await act(() => result.current.remove(1))
+    await act(async () => { await Promise.all([result.current.undo(), result.current.undo()]) })
+    expect(result.current.error).toBeNull()
+    expect(s.rows.size).toBe(1)
+    const [row] = [...s.rows.values()]
+    expect(row.id).not.toBe(1)
+    expect(row.rot).toBe(0)
+    expect(result.current.list).toHaveLength(1)
+  })
+
+  it('같은 항목을 연달아 고쳐도 이전 값이 정확해 두 번 되돌리면 원래대로', async () => {
+    const s = fakeServer()
+    vi.stubGlobal('fetch', s.fetch)
+    const { result } = renderHook(() => usePlacements(3))
+    await waitFor(() => expect(result.current.list).toHaveLength(1))
+    await act(async () => { await Promise.all([result.current.update(1, { x: 5 }), result.current.update(1, { x: 9 })]) })
+    expect(s.rows.get(1)).toMatchObject({ x: 9 })
+    await act(async () => { await Promise.all([result.current.undo(), result.current.undo()]) })
+    expect(s.rows.get(1)).toMatchObject({ x: 0 })
+    expect(result.current.error).toBeNull()
+  })
+
   it('도면이 없으면 빈 목록', () => {
     const { result } = renderHook(() => usePlacements(null))
     expect(result.current.list).toEqual([])

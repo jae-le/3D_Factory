@@ -13,11 +13,11 @@ export function usePlacements(drawingId: number | null) {
   const [tick, setTick] = useState(0)
   const history = useRef(new History())
   const idRef = useRef(drawingId)
-  const listRef = useRef<Placement[]>([])
+  const rowsRef = useRef<Placement[]>([])
+  const queue = useRef<Promise<unknown>>(Promise.resolve())
   const list = useMemo(() => (data && data.id === drawingId ? data.rows : []), [data, drawingId])
   useEffect(() => {
     idRef.current = drawingId
-    listRef.current = list
   })
 
   /** 기록이 바뀔 때마다 되돌리기·다시 하기 가능 여부를 다시 그리게 함 */
@@ -26,18 +26,23 @@ export function usePlacements(drawingId: number | null) {
   }, [])
 
   const setRows = useCallback((drawing: number, fn: (rows: Placement[]) => Placement[]) => {
-    setData((d) => (d && d.id === drawing ? { id: drawing, rows: fn(d.rows) } : d))
+    if (idRef.current !== drawing) return
+    const next = fn(rowsRef.current)
+    rowsRef.current = next
+    setData({ id: drawing, rows: next })
   }, [])
 
   const reloadList = useCallback(() => setTick((n) => n + 1), [])
 
   useEffect(() => {
     history.current.clear()
+    rowsRef.current = []
     if (drawingId === null) return
     let cancel = false
     listPlacements(drawingId)
       .then((rows) => {
         if (cancel) return
+        rowsRef.current = rows
         setData({ id: drawingId, rows })
       })
       .catch((e: Error) => !cancel && setErr({ id: drawingId, message: e.message }))
@@ -47,7 +52,7 @@ export function usePlacements(drawingId: number | null) {
   }, [drawingId, tick])
 
   /** 요청을 보내고, 실패하면 오류 문구 + 서버 기준으로 다시 불러옴 (기록은 비움) */
-  const run = useCallback(
+  const exec = useCallback(
     async (fn: (drawing: number) => Promise<void>) => {
       const drawing = idRef.current
       if (drawing === null) return
@@ -63,6 +68,16 @@ export function usePlacements(drawingId: number | null) {
       }
     },
     [bump, reloadList],
+  )
+
+  /** 변경 작업은 한 줄로 세워 앞 작업이 끝난(목록·기록 반영까지) 뒤에 시작 */
+  const run = useCallback(
+    (fn: (drawing: number) => Promise<void>): Promise<void> => {
+      const p = queue.current.then(() => exec(fn))
+      queue.current = p
+      return p
+    },
+    [exec],
   )
 
   const add = useCallback(
@@ -86,7 +101,7 @@ export function usePlacements(drawingId: number | null) {
   const update = useCallback(
     (id: number, patch: PlacementPatch) =>
       run(async (drawing) => {
-        const cur = listRef.current.find((p) => p.id === id)
+        const cur = rowsRef.current.find((p) => p.id === id)
         const before: PlacementPatch = {}
         if (cur) {
           if (patch.name !== undefined) before.name = cur.name
@@ -101,8 +116,10 @@ export function usePlacements(drawingId: number | null) {
         const res = await updatePlacement(id, patch)
         if (idRef.current !== drawing) return
         setRows(drawing, (l) => l.map((p) => (p.id === id ? res : p)))
-        history.current.push({ kind: 'update', id, before, after: patch })
-        bump()
+        if (cur) {
+          history.current.push({ kind: 'update', id, before, after: patch })
+          bump()
+        }
       }),
     [run, bump, setRows],
   )
@@ -110,7 +127,7 @@ export function usePlacements(drawingId: number | null) {
   const remove = useCallback(
     (id: number) =>
       run(async (drawing) => {
-        const cur = listRef.current.find((p) => p.id === id)
+        const cur = rowsRef.current.find((p) => p.id === id)
         await deletePlacement(id)
         if (idRef.current !== drawing) return
         setRows(drawing, (l) => l.filter((p) => p.id !== id))
