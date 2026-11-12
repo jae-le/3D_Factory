@@ -1,3 +1,4 @@
+import { isPickClick } from './clicks'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -21,7 +22,6 @@ export interface PickSource {
 }
 
 const SNAP_PX = 12
-const CLICK_PX = 5
 const MARK_COLOR = 0x1f6feb
 
 /** 그리드 칸 간격 (demo niceStep) */
@@ -128,7 +128,7 @@ export class FactoryScene implements PickSource {
     this.nav = new Navigator(this.camera, controls, renderer.domElement)
     const dom = renderer.domElement
     dom.addEventListener('pointerdown', this.onPointerDown)
-    dom.addEventListener('pointerup', this.onPointerUp)
+    dom.addEventListener('click', this.onClick)
     dom.addEventListener('dblclick', this.onDblClick)
 
     this.resizeObs = new ResizeObserver(() => this.resize())
@@ -216,7 +216,7 @@ export class FactoryScene implements PickSource {
     this.nav.dispose()
     const dom = this.renderer.domElement
     dom.removeEventListener('pointerdown', this.onPointerDown)
-    dom.removeEventListener('pointerup', this.onPointerUp)
+    dom.removeEventListener('click', this.onClick)
     dom.removeEventListener('dblclick', this.onDblClick)
     this.controls.dispose()
     this.setPlan(null)
@@ -368,12 +368,10 @@ export class FactoryScene implements PickSource {
     this.downAt = ev.button === 0 ? { x: ev.clientX, y: ev.clientY } : null
   }
 
-  private onPointerUp = (ev: PointerEvent) => {
+  private onClick = (ev: MouseEvent) => {
     const d = this.downAt
     this.downAt = null
-    if (!d || !this.onPick) return
-    if (ev.detail >= 2) return // 더블클릭의 둘째 클릭은 카메라 이동만
-    if (Math.hypot(ev.clientX - d.x, ev.clientY - d.y) >= CLICK_PX) return // 드래그 회전은 클릭 아님
+    if (!this.onPick || !isPickClick(d, ev)) return
     const p = this.pickPlan(ev)
     if (p) this.onPick(p)
   }

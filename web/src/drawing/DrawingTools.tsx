@@ -27,6 +27,7 @@ export function DrawingTools({ scene, plan, canEdit, onSave }: { scene: PickSour
     return () => scene.setGroundClick(null)
   }, [scene, tool])
   useEffect(() => scene?.setMarkers(picks), [scene, picks])
+  useEffect(() => () => scene?.setMarkers([]), [scene])
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && stop()
     window.addEventListener('keydown', onKey)
@@ -58,10 +59,10 @@ export function DrawingTools({ scene, plan, canEdit, onSave }: { scene: PickSour
           <button className={tool === 'calib' ? 'on' : ''} aria-pressed={tool === 'calib'} onClick={() => start('calib')}>
             <Scaling size={16} aria-hidden /> 스케일 보정
           </button>
-          <button onClick={() => onSave(rotate(plan))}>
+          <button onClick={() => { setPicks([]); void onSave(rotate(plan)) }}>
             <RotateCw size={16} aria-hidden /> 90° 회전
           </button>
-          <button onClick={() => onSave(flipPlan(plan))}>
+          <button onClick={() => { setPicks([]); void onSave(flipPlan(plan)) }}>
             <FlipHorizontal2 size={16} aria-hidden /> 좌우 반전
           </button>
         </>
