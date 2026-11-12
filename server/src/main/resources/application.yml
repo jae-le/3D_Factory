@@ -34,3 +34,6 @@ factory3d:
   drawing:
     max-source-bytes: ${F3D_DRAWING_MAX_SOURCE:52428800} # 원본 DXF 50MB
     max-plan-bytes: ${F3D_DRAWING_MAX_PLAN:20971520}     # 해석 결과 20MB
+  model:
+    max-bytes: ${F3D_MODEL_MAX:104857600}        # glb 100MB
+    max-thumbnail-bytes: ${F3D_MODEL_THUMB_MAX:2097152}

@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.model.ModelMapper">
+
+    <resultMap id="info" type="com.kopens.factory3d.model.ModelInfo">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="name" javaType="String"/>
+            <arg column="category" javaType="String"/>
+            <arg column="source_ext" javaType="String"/>
+            <arg column="size_x" javaType="_double"/>
+            <arg column="size_y" javaType="_double"/>
+            <arg column="size_z" javaType="_double"/>
+            <arg column="aliases" javaType="java.util.List" typeHandler="com.kopens.factory3d.model.TextArrayHandler"/>
+            <arg column="version" javaType="_int"/>
+            <arg column="used_drawings" javaType="_int"/>
+            <arg column="updated_at" javaType="java.time.OffsetDateTime"/>
+            <arg column="file" javaType="String"/>
+            <arg column="thumbnail" javaType="String"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="cols">
+        m.id, m.name, m.category, m.source_ext, m.size_x, m.size_y, m.size_z, m.aliases, m.version, m.updated_at,
+        m.file, m.thumbnail,
+        (select count(distinct p.drawing_id) from placement p where p.model_id = m.id) as used_drawings
+    </sql>
+
+    <select id="findAll" resultMap="info">select <include refid="cols"/> from model m order by m.name</select>
+    <select id="findById" resultMap="info">select <include refid="cols"/> from model m where m.id = #{id}</select>
+    <select id="findIdByName" resultType="java.lang.Long">select id from model where name = #{name}</select>
+    <select id="count" resultType="_int">select count(*) from model</select>
+    <select id="existsByName" resultType="_boolean">
+        select exists(select 1 from model where name = #{name}
+            <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>)
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into model (name, category, source_ext, size_x, size_y, size_z, aliases, created_by)
+        values (#{name}, #{category}, #{sourceExt}, #{sizeX}, #{sizeY}, #{sizeZ},
+                #{aliases,typeHandler=org.apache.ibatis.type.ArrayTypeHandler}, #{createdBy,jdbcType=VARCHAR})
+    </insert>
+
+    <update id="setFiles">update model set file = #{file}, thumbnail = #{thumbnail} where id = #{id}</update>
+
+    <update id="update">
+        update model set name = #{name}, category = #{category},
+            aliases = #{aliases,typeHandler=org.apache.ibatis.type.ArrayTypeHandler}, updated_at = now()
+        where id = #{id}
+    </update>
+
+    <update id="replaceFile">
+        update model set source_ext = #{sourceExt}, size_x = #{sx}, size_y = #{sy}, size_z = #{sz},
+            version = version + 1, updated_at = now()
+        where id = #{id}
+    </update>
+
+    <delete id="delete">delete from model where id = #{id}</delete>
+</mapper>
