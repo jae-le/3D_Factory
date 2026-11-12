@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import * as THREE from 'three'
 import { Modal } from '../components/Modal'
-import { createModel } from './api'
+import { createModel, replaceModelFile } from './api'
 import { exportGlb } from './convert/exportGlb'
 import { extOf, loadModelFiles, type ModelExt } from './convert/load'
 import { guessUnit, normalize, type Unit } from './convert/normalize'
@@ -79,7 +79,8 @@ function Preview({ group }: { group: THREE.Object3D }) {
 }
 
 /** 객체 추가: 3D 파일 선택 → 브라우저에서 읽기·단위·앞방향 정리 → glb·썸네일로 변환해 등록 */
-export function AddModelDialog({ onClose, onCreated, deps }: { onClose: () => void; onCreated: (m: ModelInfo) => void; deps?: Partial<ConvertDeps> }) {
+export function AddModelDialog({ onClose, onCreated, deps, mode }: { onClose: () => void; onCreated: (m: ModelInfo) => void; deps?: Partial<ConvertDeps>; mode?: { replace: ModelInfo } }) {
+  const replace = mode?.replace
   const d = { ...REAL, ...deps }
   const [loaded, setLoaded] = useState<Loaded | null>(null)
   const [unit, setUnit] = useState<Unit>('m')
@@ -122,15 +123,10 @@ export function AddModelDialog({ onClose, onCreated, deps }: { onClose: () => vo
     try {
       const glb = await d.exportGlb(result.group)
       const thumbnail = await d.thumbnail(result.group)
-      const m = await createModel({
-        glb,
-        thumbnail,
-        sourceExt: loaded.ext,
-        ...result.size,
-        name: name.trim(),
-        category,
-        aliases: aliases.split(',').map((a) => a.trim()).filter(Boolean),
-      })
+      const upload = { glb, thumbnail, sourceExt: loaded.ext, ...result.size }
+      const m = replace
+        ? await replaceModelFile(replace.id, upload)
+        : await createModel({ ...upload, name: name.trim(), category, aliases: aliases.split(',').map((a) => a.trim()).filter(Boolean) })
       onCreated(m)
     } catch (err) {
       setError((err as Error).message)
@@ -140,7 +136,7 @@ export function AddModelDialog({ onClose, onCreated, deps }: { onClose: () => vo
   }
   const f2 = (v: number) => v.toFixed(2)
   return (
-    <Modal title="객체 추가" onClose={onClose} wide>
+    <Modal title={replace ? `파일 교체 - ${replace.name}` : '객체 추가'} onClose={onClose} wide>
       <form className="kp-form" onSubmit={submit}>
         <label className="kp-field">
           <span>3D 파일</span>
@@ -160,6 +156,8 @@ export function AddModelDialog({ onClose, onCreated, deps }: { onClose: () => vo
             <div>
               <button type="button" className="kp-btn kp-btn-stroke" onClick={() => setTurns((t) => (t + 1) % 4)}>90° 돌리기</button>
             </div>
+            {!replace && (
+              <>
             <label className="kp-field">
               <span>이름</span>
               <input className="kp-input" value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
@@ -174,12 +172,14 @@ export function AddModelDialog({ onClose, onCreated, deps }: { onClose: () => vo
               <span>별칭</span>
               <input className="kp-input" value={aliases} placeholder="쉼표로 구분" onChange={(e) => setAliases(e.target.value)} />
             </label>
+              </>
+            )}
           </>
         )}
         {error && <p className="kp-error-text">{error}</p>}
         <div className="kp-modal-actions">
           <button type="button" className="kp-btn kp-btn-stroke" onClick={onClose}>취소</button>
-          <button type="submit" className="kp-btn kp-btn-primary" disabled={!loaded || !name.trim() || busy}>등록</button>
+          <button type="submit" className="kp-btn kp-btn-primary" disabled={!loaded || (!replace && !name.trim()) || busy}>{replace ? '교체' : '등록'}</button>
         </div>
       </form>
     </Modal>

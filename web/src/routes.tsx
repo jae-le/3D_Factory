@@ -4,6 +4,7 @@ import { AdminLayout } from './pages/admin/AdminLayout'
 import { AuditPage } from './pages/admin/AuditPage'
 import { DrawingsPage } from './pages/admin/DrawingsPage'
 import { LoginHistoryPage } from './pages/admin/LoginHistoryPage'
+import { ModelsPage } from './pages/admin/ModelsPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { ErrorPage } from './pages/ErrorPage'
 import { FactoryPage } from './pages/FactoryPage'
@@ -25,6 +26,7 @@ export const routes: RouteObject[] = [
       { path: 'login-history', element: <LoginHistoryPage /> },
       { path: 'audit', element: <AuditPage /> },
       { path: 'drawings', element: <DrawingsPage /> },
+      { path: 'models', element: <ModelsPage /> },
     ],
   },
   { path: '*', element: <ErrorPage code="404" /> },

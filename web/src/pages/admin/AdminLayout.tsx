@@ -18,6 +18,7 @@ export function AdminLayout() {
           <NavLink to="/admin/login-history">로그인 이력</NavLink>
           <NavLink to="/admin/audit">감사 기록</NavLink>
           <NavLink to="/admin/drawings">도면 관리</NavLink>
+          <NavLink to="/admin/models">객체관리</NavLink>
         </nav>
         <main className="kp-content">
           <Outlet />
