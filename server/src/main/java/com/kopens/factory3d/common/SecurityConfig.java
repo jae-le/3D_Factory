@@ -63,6 +63,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/health", "/api/auth/login").permitAll()
                         .requestMatchers("/api/auth/**").authenticated()
                         .requestMatchers("/api/users/**", "/api/audit/**", "/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/drawings/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/drawings/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/**").hasRole("VIEWER")
                         .requestMatchers("/api/**").hasRole("OPERATOR")
                         .requestMatchers("/v3/**", "/swagger-ui/**", "/swagger-ui.html").hasRole("ADMIN")

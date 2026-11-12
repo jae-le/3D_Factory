@@ -7,11 +7,67 @@
             <idArg column="id" javaType="_long"/>
             <arg column="name" javaType="String"/>
             <arg column="source_type" javaType="String"/>
+            <arg column="version" javaType="_int"/>
+            <arg column="created_by" javaType="String"/>
             <arg column="updated_at" javaType="java.time.OffsetDateTime"/>
+            <arg column="width" javaType="Double"/>
+            <arg column="height" javaType="Double"/>
+        </constructor>
+    </resultMap>
+
+    <resultMap id="detail" type="com.kopens.factory3d.drawing.DrawingDetail">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="name" javaType="String"/>
+            <arg column="source_type" javaType="String"/>
+            <arg column="version" javaType="_int"/>
+            <arg column="created_by" javaType="String"/>
+            <arg column="created_at" javaType="java.time.OffsetDateTime"/>
+            <arg column="updated_at" javaType="java.time.OffsetDateTime"/>
+            <arg column="plan" javaType="String"/>
+            <arg column="layer_rules" javaType="String"/>
+            <arg column="source_file" javaType="String"/>
         </constructor>
     </resultMap>
 
     <select id="findAll" resultMap="summary">
-        select id, name, source_type, updated_at from drawing order by id
+        select id, name, source_type, version, created_by, updated_at,
+               (plan -> 'bounds' ->> 'w')::float8 as width, (plan -> 'bounds' ->> 'h')::float8 as height
+        from drawing order by id
     </select>
+
+    <select id="findById" resultMap="detail">
+        select id, name, source_type, version, created_by, created_at, updated_at,
+               plan::text as plan, layer_rules::text as layer_rules, source_file
+        from drawing where id = #{id}
+    </select>
+
+    <select id="count" resultType="_int">select count(*) from drawing</select>
+
+    <select id="existsByName" resultType="_boolean">
+        select exists(select 1 from drawing where name = #{name}
+            <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>)
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id" keyColumn="id">
+        insert into drawing (name, source_type, source_file, plan, layer_rules, created_by)
+        values (#{name}, #{sourceType}, '', cast(#{plan} as jsonb), cast(#{layerRules} as jsonb),
+                #{createdBy,jdbcType=VARCHAR})
+    </insert>
+
+    <update id="setSourceFile">
+        update drawing set source_file = #{sourceFile} where id = #{id}
+    </update>
+
+    <update id="updatePlan">
+        update drawing set plan = cast(#{plan} as jsonb), layer_rules = cast(#{layerRules} as jsonb),
+               version = version + 1, updated_at = now()
+        where id = #{id} and version = #{version}
+    </update>
+
+    <update id="rename">
+        update drawing set name = #{name}, updated_at = now() where id = #{id}
+    </update>
+
+    <delete id="delete">delete from drawing where id = #{id}</delete>
 </mapper>

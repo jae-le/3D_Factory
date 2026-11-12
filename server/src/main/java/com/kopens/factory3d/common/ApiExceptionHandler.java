@@ -39,6 +39,11 @@ public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
         return problem(HttpStatus.CONFLICT, "충돌", e.getMessage());
     }
 
+    @ExceptionHandler(PayloadTooLargeException.class)
+    ProblemDetail tooLarge(PayloadTooLargeException e) {
+        return problem(HttpStatus.PAYLOAD_TOO_LARGE, "너무 큼", e.getMessage());
+    }
+
     @ExceptionHandler(Exception.class)
     ProblemDetail unexpected(Exception e) {
         log.error("처리하지 못한 오류", e);

@@ -31,3 +31,6 @@ factory3d:
   time-zone: ${F3D_TIME_ZONE:Asia/Seoul}
   # 처음 관리자(admin) 비밀번호. 비우면 임의로 만들어 로그에 한 번 출력 (첫 로그인 때 변경 강제)
   admin-password: ${F3D_ADMIN_PASSWORD:}
+  drawing:
+    max-source-bytes: ${F3D_DRAWING_MAX_SOURCE:52428800} # 원본 DXF 50MB
+    max-plan-bytes: ${F3D_DRAWING_MAX_PLAN:20971520}     # 해석 결과 20MB
