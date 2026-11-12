@@ -7,7 +7,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.kopens.factory3d.support.IntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 
+@WithMockUser(username = "tester", roles = "ADMIN")
 class CommonWebTest extends IntegrationTest {
 
     @Test

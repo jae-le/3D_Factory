@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.audit.AuditMapper">
+
+    <resultMap id="entry" type="com.kopens.factory3d.audit.AuditEntry">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="at" javaType="java.time.OffsetDateTime"/>
+            <arg column="username" javaType="String"/>
+            <arg column="action" javaType="String"/>
+            <arg column="target" javaType="String"/>
+            <arg column="detail" javaType="String"/>
+            <arg column="ip" javaType="String"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        insert into audit_log (username, action, target, detail, ip)
+        values (#{username,jdbcType=VARCHAR}, #{action}, #{target,jdbcType=VARCHAR}, #{detail,jdbcType=VARCHAR},
+                #{ip,jdbcType=VARCHAR})
+    </insert>
+
+    <select id="findRecent" resultMap="entry">
+        select id, at, username, action, target, detail, ip from audit_log order by id desc limit #{limit}
+    </select>
+</mapper>

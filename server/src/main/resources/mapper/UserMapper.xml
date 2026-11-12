@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.auth.UserMapper">
+
+    <resultMap id="user" type="com.kopens.factory3d.auth.AppUser">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="username" javaType="String"/>
+            <arg column="display_name" javaType="String"/>
+            <arg column="password_hash" javaType="String"/>
+            <arg column="role" javaType="com.kopens.factory3d.auth.Role"/>
+            <arg column="enabled" javaType="_boolean"/>
+            <arg column="must_change_password" javaType="_boolean"/>
+            <arg column="failed_count" javaType="_int"/>
+            <arg column="locked_until" javaType="java.time.OffsetDateTime"/>
+            <arg column="last_login_at" javaType="java.time.OffsetDateTime"/>
+            <arg column="created_at" javaType="java.time.OffsetDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="columns">
+        id, username, display_name, password_hash, role, enabled, must_change_password, failed_count,
+        locked_until, last_login_at, created_at
+    </sql>
+
+    <select id="count" resultType="_int">select count(*) from app_user</select>
+
+    <select id="countEnabledAdmins" resultType="_int">
+        select count(*) from app_user where role = 'ADMIN' and enabled
+    </select>
+
+    <select id="findAll" resultMap="user">
+        select <include refid="columns"/> from app_user order by id
+    </select>
+
+    <select id="findById" resultMap="user">
+        select <include refid="columns"/> from app_user where id = #{id}
+    </select>
+
+    <select id="findByUsername" resultMap="user">
+        select <include refid="columns"/> from app_user where username = #{username}
+    </select>
+
+    <insert id="insert">
+        insert into app_user (username, display_name, password_hash, role, must_change_password)
+        values (#{username}, #{displayName}, #{passwordHash}, #{role}, true)
+    </insert>
+
+    <update id="update">
+        update app_user set display_name = #{displayName}, role = #{role}, enabled = #{enabled}, updated_at = now()
+        where id = #{id}
+    </update>
+
+    <update id="setPassword">
+        update app_user set password_hash = #{passwordHash}, must_change_password = #{mustChange},
+            failed_count = 0, locked_until = null, updated_at = now()
+        where id = #{id}
+    </update>
+
+    <update id="loginFailed">
+        update app_user set failed_count = #{failedCount}, locked_until = #{lockedUntil,jdbcType=TIMESTAMP_WITH_TIMEZONE}
+        where id = #{id}
+    </update>
+
+    <update id="loginOk">
+        update app_user set failed_count = 0, locked_until = null, last_login_at = now() where id = #{id}
+    </update>
+
+    <delete id="delete">
+        delete from app_user where id = #{id}
+    </delete>
+</mapper>
