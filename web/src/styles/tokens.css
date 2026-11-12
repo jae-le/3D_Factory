@@ -1,0 +1,53 @@
+/* KOPENS 디자인 수치 (루트 DESIGN.md). px 그대로 씀 — DESIGN.md 의 html{font-size:10px} 는 3D 화면을 깨므로 쓰지 않음.
+   글꼴·글자·높이·둥글기·간격은 모든 화면 공통. 색(--kp-primary 등)은 새 화면 전용 — 3D 화면은 index.css 의 색을 씀. */
+:root {
+  --kp-font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+
+  /* 글자 단계 (크기 / 줄 높이) */
+  --kp-text-12: 12px; --kp-lh-12: 18px;
+  --kp-text-13: 13px; --kp-lh-13: 18px;
+  --kp-text-14: 14px; --kp-lh-14: 20px;
+  --kp-text-16: 16px; --kp-lh-16: 24px;
+  --kp-text-18: 18px; --kp-lh-18: 26px;
+  --kp-text-20: 20px; --kp-lh-20: 28px;
+  --kp-text-28: 28px; --kp-lh-28: 38px;
+
+  /* 컨트롤 높이 (버튼·입력·선택·탭 공통) */
+  --kp-h-xxs: 24px;
+  --kp-h-xs: 36px;
+  --kp-h-sm: 44px;
+  --kp-h-md: 48px;
+  --kp-h-lg: 56px;
+
+  /* 둥글기: 버튼 xxs·xs 4px, 그 외 컨트롤 6px, 카드 16px */
+  --kp-radius-xs: 4px;
+  --kp-radius-sm: 6px;
+  --kp-radius-card: 16px;
+  --kp-radius-pill: 9999px;
+
+  /* 간격 단계 */
+  --kp-sp-4: 4px; --kp-sp-6: 6px; --kp-sp-8: 8px; --kp-sp-10: 10px; --kp-sp-12: 12px;
+  --kp-sp-16: 16px; --kp-sp-20: 20px; --kp-sp-24: 24px; --kp-sp-28: 28px; --kp-sp-32: 32px;
+  --kp-sp-36: 36px; --kp-sp-40: 40px; --kp-sp-42: 42px; --kp-sp-48: 48px;
+
+  /* 유일한 그림자 (모달 등 떠 있는 것만) */
+  --kp-shadow: rgba(0, 0, 0, 0.02) 0 0 0 1px, rgba(0, 0, 0, 0.04) 0 2px 6px 0, rgba(0, 0, 0, 0.1) 0 4px 8px 0;
+
+  /* 색 — 새 화면 전용 */
+  --kp-primary: #3182f6;
+  --kp-primary-hover: #296ecf;
+  --kp-primary-focus: #006aff;
+  --kp-primary-week: rgba(49, 130, 246, 0.1);
+  --kp-green: #04b014;
+  --kp-red: #dc0000;
+  --kp-orange: #ffaa00;
+  --kp-bg: #f7f7fb;
+  --kp-white: #fff;
+  --kp-text: #111;
+  --kp-text-sub: #767676;
+  --kp-text-sub-2: #505050;
+  --kp-text-disabled: #999;
+  --kp-border: #e5e5ec;
+  --kp-disabled-fill: #f5f5f5;
+  --kp-aside: #1e293b;
+}

@@ -1,0 +1,62 @@
+/* Factory3D 작업 화면 (어두운 바탕). 관리자 화면은 kp.css (흰 바탕) */
+:root {
+  --bg: #16181c;
+  --rail: #111215;
+  --panel: #1a1c20;
+  --rail-w: 56px;
+  --head-h: 48px;
+  --primary: var(--kp-primary);
+  --line: #ffffff14;
+  --line-strong: #ffffff29;
+  --text: #e8eaee;
+  --muted: #8d939e;
+  font-family: var(--kp-font);
+  color: var(--text);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; margin: 0; }
+button { font: inherit; color: inherit; cursor: pointer; }
+
+.app-loading { min-height: 100vh; display: grid; place-items: center; margin: 0; color: var(--muted); background: var(--bg); }
+
+/* 바깥 틀: 레일 + (머리글 · 본문) */
+.app-shell { height: 100%; display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); grid-template-areas: 'rail main'; background: var(--bg); }
+.app-main { grid-area: main; display: flex; flex-direction: column; min-height: 0; }
+.app-head { flex: none; height: var(--head-h); display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.app-head .spacer { flex: 1; }
+.app-body { position: relative; flex: 1; min-height: 0; }
+
+/* 아이콘 레일 */
+.rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-bottom: 12px; background: var(--rail); border-right: 1px solid var(--line); }
+.rail-logo { display: grid; place-items: center; width: var(--rail-w); height: var(--head-h); flex: none; font-size: var(--kp-text-16); font-weight: 700; color: #fff; border-bottom: 1px solid var(--line); margin-bottom: 6px; }
+.rail button { width: 40px; height: 40px; display: grid; place-items: center; border: 0; border-radius: var(--kp-radius-sm); background: none; color: var(--muted); }
+.rail button:hover:not(:disabled) { background: #ffffff10; color: #fff; }
+.rail button.active { background: color-mix(in srgb, var(--primary) 22%, transparent); color: var(--primary); }
+.rail button:disabled { opacity: 0.45; cursor: default; }
+.rail .rail-bottom { margin-top: auto; }
+
+/* 도면 select + 추가 */
+.drawing-bar { display: flex; align-items: center; gap: 8px; }
+.drawing-select { display: flex; align-items: center; gap: 8px; font-size: var(--kp-text-13); color: var(--muted); }
+.drawing-select select { height: var(--kp-h-xs); min-width: 220px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: #ffffff08; color: var(--text); font: inherit; font-size: var(--kp-text-14); }
+.drawing-select select option { color: #111; }
+.bar-btn { display: flex; align-items: center; gap: 6px; height: var(--kp-h-xs); padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: #ffffff08; font-size: var(--kp-text-13); }
+.bar-btn:hover:not(:disabled) { background: #ffffff14; }
+.bar-btn:disabled { opacity: 0.45; cursor: default; }
+
+/* 빈 화면 안내 */
+.empty-state { position: absolute; inset: 0; display: grid; place-content: center; gap: 8px; margin: 0; text-align: center; color: var(--muted); font-size: var(--kp-text-14); }
+.empty-state strong { color: var(--text); font-size: var(--kp-text-16); }
+
+/* 사용자 메뉴 (머리글 오른쪽) */
+.user-menu { position: relative; }
+.user-btn { display: flex; align-items: center; gap: 8px; height: var(--kp-h-xs); padding: 0 10px; border: 1px solid var(--line); border-radius: var(--kp-radius-sm); background: #ffffff08; color: var(--text); font-size: var(--kp-text-13); }
+.user-btn:hover { background: #ffffff14; }
+.user-name { font-weight: 600; }
+.user-role { padding: 1px 6px; border-radius: var(--kp-radius-xs); background: color-mix(in srgb, var(--primary) 25%, transparent); color: #9cc3ff; font-size: var(--kp-text-12); }
+.user-pop { position: absolute; z-index: 10; right: 0; top: calc(100% + 6px); min-width: 180px; padding: 6px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: var(--panel); box-shadow: 0 12px 32px #0009; }
+.user-id { margin: 0 0 6px; padding: 4px 8px 8px; font-size: var(--kp-text-12); color: var(--muted); border-bottom: 1px solid var(--line); }
+.user-pop button { width: 100%; display: flex; align-items: center; gap: 8px; height: var(--kp-h-xs); padding: 0 8px; border: 0; border-radius: var(--kp-radius-xs); background: none; color: var(--text); font-size: var(--kp-text-13); text-align: left; }
+.user-pop button:hover { background: #ffffff10; }
