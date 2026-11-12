@@ -1,4 +1,4 @@
-import { isPickClick } from './clicks'
+import { CLICK_PX, isPickClick } from './clicks'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js'
@@ -7,9 +7,12 @@ import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import type { Plan, Pt } from '../drawing/plan/types'
+import { cellSize, rectOf, snapToCells } from '../objects/grid'
 import { localToPlan, planToLocal } from './coords'
 import { createMaterials, type Materials } from './materials'
+import { disposeCache, loadModel } from './modelCache'
 import { Navigator } from './navigation'
+import { ObjectLayer, type GhostSpec, type ObjectEvents, type SceneObject } from './objectLayer'
 import { planToMeshes, type PlanMeshes } from './planToMeshes'
 import { createTextures, type Textures } from './textures'
 
@@ -19,6 +22,15 @@ export interface GroundPick { x: number; y: number } // plan 좌표(m)
 export interface PickSource {
   setGroundClick(cb: ((p: GroundPick) => void) | null): void
   setMarkers(pts: Pt[]): void
+}
+/** 배치 객체 표시·선택·배치·편집 끌기 (React 쪽 배치 화면이 부름) */
+export interface ObjectHost {
+  setObjects(list: SceneObject[]): void
+  setSelected(id: number | null): void
+  setEditing(id: number | null): void
+  setPlacing(g: GhostSpec | null): void
+  setObjectEvents(e: ObjectEvents | null): void
+  focusObject(id: number): void
 }
 
 const SNAP_PX = 12
@@ -46,7 +58,7 @@ function disposeGroup(g: THREE.Object3D) {
 }
 
 /** 3D 공장 화면. React 는 setPlan·setView·setQuality·도구 콜백만 부른다 */
-export class FactoryScene implements PickSource {
+export class FactoryScene implements PickSource, ObjectHost {
   private container: HTMLElement
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
@@ -65,6 +77,14 @@ export class FactoryScene implements PickSource {
   private grid: THREE.GridHelper | null = null
   private root = new THREE.Group() // 회전·반전 (plan.rotQ, plan.flip)
   private overlay = new THREE.Group() // 측정 점·선 (root 아래)
+  private objects = new THREE.Group() // 배치 객체 (root 아래)
+  private objectLayer: ObjectLayer
+  private objEvents: ObjectEvents | null = null
+  private editingId: number | null = null
+  // 편집 끌기: 잡은 점과 중심의 차이(plan m), 마지막 자리
+  private drag: { id: number; pointerId: number; dx: number; dy: number; x: number; y: number; moved: boolean } | null = null
+  private skipClick = false // 끌기 끝난 직후의 click 은 선택을 바꾸지 않음
+  private rDownAt: { x: number; y: number } | null = null // 오른쪽 누른 자리 (배치 회전은 안 움직인 오른쪽 클릭만)
   // 측정 점: 화면 크기 고정 점, 선: 항상 위에 (깊이 무시)
   private markMat = new THREE.PointsMaterial({ color: MARK_COLOR, size: 12, sizeAttenuation: false, depthTest: false, toneMapped: false, transparent: true })
   private markLineMat = new THREE.LineBasicMaterial({ color: MARK_COLOR, depthTest: false, toneMapped: false, transparent: true })
@@ -129,11 +149,17 @@ export class FactoryScene implements PickSource {
     this.ground.position.y = -0.01
     this.ground.receiveShadow = true
     this.scene.add(this.ground, this.root)
-    this.root.add(this.overlay)
+    this.root.add(this.overlay, this.objects)
+    this.objectLayer = new ObjectLayer(this.objects, loadModel)
 
     this.nav = new Navigator(this.camera, controls, renderer.domElement)
     const dom = renderer.domElement
-    dom.addEventListener('pointerdown', this.onPointerDown)
+    // 누름은 capture 단계 — 편집 끌기를 시작하면 OrbitControls·Navigator 가 이 누름을 받지 않게 막음
+    dom.addEventListener('pointerdown', this.onPointerDown, true)
+    dom.addEventListener('pointermove', this.onPointerMove)
+    dom.addEventListener('pointerup', this.onPointerUp)
+    dom.addEventListener('pointercancel', this.onPointerUp)
+    dom.addEventListener('contextmenu', this.onContextMenu)
     dom.addEventListener('click', this.onClick)
     dom.addEventListener('dblclick', this.onDblClick)
 
@@ -163,8 +189,10 @@ export class FactoryScene implements PickSource {
     this.plan = plan
     if (!plan) {
       this.clearOverlay()
+      this.objectLayer.setObjects([])
       return
     }
+    this.objectLayer.setBounds(plan.bounds)
     this.meshes = planToMeshes(plan, this.mats, { labels: true })
     this.root.add(this.meshes.group)
     this.root.scale.set(plan.flip, 1, 1)
@@ -221,17 +249,53 @@ export class FactoryScene implements PickSource {
     this.overlay.add(dots)
   }
 
+  setObjects(list: SceneObject[]): void {
+    this.objectLayer.setObjects(list)
+    if (this.drag && !this.objectLayer.object(this.drag.id)) this.endDrag()
+  }
+
+  setSelected(id: number | null): void {
+    this.objectLayer.setSelected(id)
+  }
+
+  setEditing(id: number | null): void {
+    this.editingId = id
+    if (this.drag && this.drag.id !== id) this.endDrag()
+    this.objectLayer.setEditing(id)
+  }
+
+  setPlacing(g: GhostSpec | null): void {
+    this.objectLayer.setGhost(g)
+  }
+
+  setObjectEvents(e: ObjectEvents | null): void {
+    this.objEvents = e
+  }
+
+  focusObject(id: number): void {
+    const o = this.objectLayer.object(id), pos = this.objectLayer.worldPos(id)
+    if (o && pos) this.nav.focusOn(pos, Math.max(o.sizeX, o.sizeY, 6))
+  }
+
   dispose(): void {
     this.renderer.setAnimationLoop(null)
     this.resizeObs.disconnect()
     this.timer.dispose()
     this.nav.dispose()
     const dom = this.renderer.domElement
-    dom.removeEventListener('pointerdown', this.onPointerDown)
+    dom.removeEventListener('pointerdown', this.onPointerDown, true)
+    dom.removeEventListener('pointermove', this.onPointerMove)
+    dom.removeEventListener('pointerup', this.onPointerUp)
+    dom.removeEventListener('pointercancel', this.onPointerUp)
+    dom.removeEventListener('contextmenu', this.onContextMenu)
     dom.removeEventListener('click', this.onClick)
     dom.removeEventListener('dblclick', this.onDblClick)
     this.controls.dispose()
+    this.objEvents = null
+    this.drag = null
     this.setPlan(null)
+    this.objectLayer.dispose()
+    disposeCache()
     this.markMat.dispose()
     this.markLineMat.dispose()
     if (this.grid) this.grid.dispose()
@@ -319,6 +383,7 @@ export class FactoryScene implements PickSource {
       }
       for (const z of this.meshes.zoneLabels) z.sprite.material.map = is3d ? z.dark : z.light
     }
+    this.objectLayer.setDark(is3d)
     this.hemi.intensity = is3d ? 0.3 : 0.9
     sun.intensity = is3d ? 2.2 : 1.4
     this.renderer.shadowMap.enabled = is3d
@@ -356,12 +421,30 @@ export class FactoryScene implements PickSource {
 
   /** 화면 좌표 → 바닥(y=0) 교차점 (월드) */
   private hitGround(ev: MouseEvent): THREE.Vector3 | null {
-    const rect = this.renderer.domElement.getBoundingClientRect()
-    if (!rect.width || !rect.height) return null
-    this.ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1)
-    this.ray.setFromCamera(this.ndc, this.camera)
+    if (!this.rayAt(ev)) return null
     const hit = new THREE.Vector3()
     return this.ray.ray.intersectPlane(this.floor, hit)
+  }
+
+  /** 화면 좌표로 this.ray 를 맞춤 (월드). 캔버스 크기가 0 이면 false */
+  private rayAt(ev: MouseEvent): boolean {
+    const rect = this.renderer.domElement.getBoundingClientRect()
+    if (!rect.width || !rect.height) return false
+    this.ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1)
+    this.ray.setFromCamera(this.ndc, this.camera)
+    return true
+  }
+
+  /** 바닥 교차점 → plan 좌표 (꼭짓점 붙기 없음 — 객체 배치·끌기용) */
+  private groundPlan(ev: MouseEvent): GroundPick | null {
+    const plan = this.plan
+    if (!plan) return null
+    const hit = this.hitGround(ev)
+    if (!hit) return null
+    this.root.updateMatrixWorld(true)
+    const loc = this.root.worldToLocal(hit)
+    const [x, y] = localToPlan(loc.x, loc.z, plan.bounds)
+    return { x, y }
   }
 
   /** 바닥 클릭 → plan 좌표. 화면상 SNAP_PX 안의 가장 가까운 도면 꼭짓점에 붙임 (demo pickGround) */
@@ -393,16 +476,101 @@ export class FactoryScene implements PickSource {
     return { x, y }
   }
 
+  /** capture 단계. 편집 중인 배치를 왼쪽으로 누르면 끌기 시작 (측정·배치 모드가 아닐 때만) */
   private onPointerDown = (ev: PointerEvent) => {
     this.downAt = ev.button === 0 ? { x: ev.clientX, y: ev.clientY } : null
+    this.rDownAt = ev.button === 2 ? { x: ev.clientX, y: ev.clientY } : null
+    this.skipClick = false
+    const id = this.editingId
+    if (ev.button !== 0 || id == null || this.drag || this.onPick || this.objectLayer.hasGhost()) return
+    const p = this.groundPlan(ev) // this.ray 도 맞춰짐
+    const o = this.objectLayer.object(id)
+    if (!p || !o || this.objectLayer.pick(this.ray) !== id) return
+    this.drag = { id, pointerId: ev.pointerId, dx: p.x - o.x, dy: p.y - o.y, x: o.x, y: o.y, moved: false }
+    this.controls.enabled = false
+    const dom = this.renderer.domElement
+    dom.setPointerCapture(ev.pointerId)
+    dom.style.cursor = 'grabbing'
+    ev.stopImmediatePropagation() // 카메라 회전·포커스 취소가 같이 일어나지 않게
   }
 
+  private onPointerMove = (ev: PointerEvent) => {
+    const d = this.drag
+    if (d) {
+      if (ev.pointerId !== d.pointerId) return
+      const p = this.groundPlan(ev), o = this.objectLayer.object(d.id), plan = this.plan
+      if (!p || !o || !plan) return
+      let x = p.x - d.dx, y = p.y - d.dy
+      if (!ev.shiftKey) ({ x, y } = snapToCells(rectOf({ x, y, rot: o.rot }, o), x, y, cellSize(plan.bounds)))
+      if (x === d.x && y === d.y) return
+      d.x = x
+      d.y = y
+      d.moved = true
+      this.objectLayer.move(d.id, x, y)
+      this.objEvents?.onDrag?.(d.id, x, y)
+      return
+    }
+    if (this.objectLayer.hasGhost() && !this.onPick) {
+      const p = this.groundPlan(ev)
+      if (p) this.objectLayer.moveGhost(p.x, p.y, !ev.shiftKey)
+    }
+  }
+
+  private onPointerUp = (ev: PointerEvent) => {
+    const d = this.drag
+    if (!d || ev.pointerId !== d.pointerId) return
+    this.endDrag()
+    if (!d.moved) return // 움직이지 않았으면 보통 클릭으로 (선택)
+    this.skipClick = true
+    this.objEvents?.onDrop?.(d.id, d.x, d.y)
+  }
+
+  private endDrag() {
+    const d = this.drag
+    if (!d) return
+    this.drag = null
+    this.controls.enabled = true
+    const dom = this.renderer.domElement
+    dom.style.cursor = ''
+    if (dom.hasPointerCapture(d.pointerId)) dom.releasePointerCapture(d.pointerId)
+  }
+
+  /** 배치 모드: 안 움직인 오른쪽 클릭 = 미리보기 90° 회전 (메뉴는 막음) */
+  private onContextMenu = (ev: MouseEvent) => {
+    if (!this.objectLayer.hasGhost()) return
+    ev.preventDefault()
+    const d = this.rDownAt
+    this.rDownAt = null
+    if (d && Math.hypot(ev.clientX - d.x, ev.clientY - d.y) >= CLICK_PX) return // 오른쪽 끌기(화면 이동) 뒤
+    this.objectLayer.rotateGhost()
+  }
+
+  /** 클릭 순서: ① 측정 도구 ② 배치 모드 = onPlace ③ 객체 선택 (빈 곳 = null) */
   private onClick = (ev: MouseEvent) => {
     const d = this.downAt
     this.downAt = null
-    if (!this.onPick || !isPickClick(d, ev)) return
-    const p = this.pickPlan(ev)
-    if (p) this.onPick(p)
+    if (this.skipClick) {
+      this.skipClick = false
+      return
+    }
+    if (!isPickClick(d, ev)) return
+    if (this.onPick) {
+      const p = this.pickPlan(ev)
+      if (p) this.onPick(p)
+      return
+    }
+    const events = this.objEvents
+    if (this.objectLayer.hasGhost()) {
+      const p = this.groundPlan(ev)
+      if (!p) return
+      this.objectLayer.moveGhost(p.x, p.y, !ev.shiftKey)
+      const g = this.objectLayer.ghostPose()
+      if (g) events?.onPlace?.(g.x, g.y, g.rot)
+      return
+    }
+    if (!events || !this.rayAt(ev)) return
+    this.root.updateMatrixWorld(true)
+    events.onSelect(this.objectLayer.pick(this.ray))
   }
 
   private onDblClick = (ev: MouseEvent) => {
