@@ -17,17 +17,38 @@ public class DrawingSeeder implements ApplicationRunner {
     private final DrawingMapper drawings;
     private final DrawingService service;
 
-    public DrawingSeeder(DrawingMapper drawings, DrawingService service) {
+    private final com.kopens.factory3d.model.ModelSeeder modelSeeder;
+    private final com.kopens.factory3d.placement.PlacementSeeder placementSeeder;
+
+    public DrawingSeeder(DrawingMapper drawings, DrawingService service, com.kopens.factory3d.model.ModelSeeder modelSeeder,
+            com.kopens.factory3d.placement.PlacementSeeder placementSeeder) {
         this.drawings = drawings;
         this.service = service;
+        this.modelSeeder = modelSeeder;
+        this.placementSeeder = placementSeeder;
     }
 
     @Override
     public void run(ApplicationArguments args) {
+        seedAll();
+    }
+
+    /** 시작 순서: 기본 모델 → 기본 도면 → 기본 배치. 단계별로 실패해도 다음 단계 시도 */
+    public void seedAll() {
+        try {
+            modelSeeder.seedIfEmpty();
+        } catch (Exception e) {
+            log.warn("기본 모델을 넣지 못했습니다: {}", e.getMessage());
+        }
         try {
             seedIfEmpty();
         } catch (Exception e) {
             log.warn("기본 도면을 넣지 못했습니다: {}", e.getMessage());
+        }
+        try {
+            placementSeeder.seedFactory();
+        } catch (Exception e) {
+            log.warn("기본 배치를 넣지 못했습니다: {}", e.getMessage());
         }
     }
 
