@@ -1,0 +1,51 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '4.1.1'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.kopens'
+version = '0.1.0'
+
+java {
+    toolchain { languageVersion = JavaLanguageVersion.of(21) }
+}
+
+repositories { mavenCentral() }
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-flyway'
+    implementation 'org.mybatis.spring.boot:mybatis-spring-boot-starter:4.1.0'
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
+
+tasks.named('test') { useJUnitPlatform() }
+
+// 화면(web) 빌드 결과를 jar 의 static/ 에 넣음. 이미 빌드했으면 -PskipWebBuild
+def isWindows = System.getProperty('os.name').toLowerCase().contains('windows')
+tasks.register('buildWeb', Exec) {
+    description = '화면(web) 빌드 → ../web/dist'
+    workingDir file('../web')
+    commandLine isWindows ? ['cmd', '/c', 'npm', 'run', 'build'] : ['npm', 'run', 'build']
+    inputs.dir('../web/src')
+    inputs.file('../web/index.html')
+    inputs.file('../web/package.json')
+    outputs.dir('../web/dist')
+}
+
+tasks.named('bootJar') {
+    archiveFileName = 'factory3d.jar'
+    if (!project.hasProperty('skipWebBuild')) dependsOn 'buildWeb'
+    from('../web/dist') { into 'BOOT-INF/classes/static' }
+}
+
+tasks.named('jar') { enabled = false }

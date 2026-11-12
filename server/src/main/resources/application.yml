@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: factory3d
+  datasource:
+    url: ${F3D_DB_URL:jdbc:postgresql://localhost:5433/factory3d}
+    username: ${F3D_DB_USER:factory3d}
+    password: ${F3D_DB_PASSWORD:factory3d}
+  servlet:
+    multipart:
+      max-file-size: ${F3D_MAX_UPLOAD:200MB}
+      max-request-size: ${F3D_MAX_UPLOAD:200MB}
+  mvc:
+    problemdetails:
+      enabled: true
+server:
+  port: ${F3D_PORT:8080}
+  error:
+    whitelabel:
+      enabled: false
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+factory3d:
+  # 업로드 파일 (도면 원본·3D 모델·썸네일). DB 에는 이 폴더 기준 상대 경로만
+  data-dir: ${F3D_DATA_DIR:../data}
+  time-zone: ${F3D_TIME_ZONE:Asia/Seoul}

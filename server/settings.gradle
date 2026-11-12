@@ -1,0 +1,5 @@
+plugins {
+    // JDK 21 이 없으면 자동으로 받아 씀 (개발 PC 는 Java 17)
+    id 'org.gradle.toolchains.foojay-resolver-convention' version '1.0.0'
+}
+rootProject.name = 'factory3d-server'
