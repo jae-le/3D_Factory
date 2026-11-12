@@ -25,6 +25,13 @@ cd web && npm run dev               # http://localhost:5200 (화면, /api 는 80
 - 레이어 이름으로 역할을 정합니다: PARTITION/칸막이/가벽 → 낮은 가벽(1.2m), WALL/벽 → 외벽(8m), COLUMN/기둥 → H빔, STATION/ZONE/구역 → 구역, EQUIP/설비 → 객체 표기. 관리자 › 도면 관리에서 도면마다 바꿀 수 있습니다.
 - 해석기(web/src/drawing)를 바꾸면 `cd web && npm run seed:plan` 으로 기본 도면 plan 을 다시 만드세요.
 
+### 객체
+- 처음 실행하면 기본 모델 11종(설비 5 · 자재 6)과 나셀 공장 배치 79개가 들어갑니다.
+- 운전원 이상: 왼쪽 객체 패널에서 카드를 눌러 배치(우클릭 90° 회전, Esc 끝), 객체를 골라 `편집`(끌기, Shift 자유)·회전·삭제, Ctrl+Z / Ctrl+Y.
+- `＋ 객체 추가`: glb · gltf · fbx · obj · stl (최대 100MB) → 브라우저에서 glb 로 변환해 등록.
+- 도면에 EQUIP/설비 레이어 글자·블록이 있으면 모델 이름·별칭과 맞춰 자동 배치합니다 (없으면 임시 상자).
+- 기본 모델을 다시 구우려면 `cd web && npm run bake:models` (Edge 필요), 기본 배치는 `npm run seed:placements`.
+
 ## 배포 (jar 하나 + PostgreSQL)
 ```
 cd server && ./gradlew bootJar      # build/libs/factory3d.jar (화면 포함)
@@ -45,4 +52,5 @@ cd server && ./gradlew test         # 테스트 DB factory3d_test 를 매번 비
 cd web && npm test
 cd web && node e2e/p1-smoke.mjs http://localhost:8080 <처음 비밀번호> <새 비밀번호>   # 깨끗한 DB 의 실행 중인 서버로 (Microsoft Edge 필요)
 cd web && node e2e/p2-smoke.mjs http://localhost:8080 admin <비밀번호>   # 비밀번호 변경을 마친 계정으로: 3D·도면 보기·측정·도면 추가·도면 관리
+cd web && node e2e/p3-smoke.mjs http://localhost:8080 admin <비밀번호>   # P2 smoke 다음에: 객체 배치·편집·추가·관리
 ```
