@@ -11,9 +11,9 @@ interface WithTemp {
 }
 
 const ROLES: { role: Role; desc: string }[] = [
-  { role: 'VIEWER', desc: '모니터링만' },
-  { role: 'OPERATOR', desc: '모니터링 + 시운전 점검' },
-  { role: 'ADMIN', desc: '전부 + 사용자 관리' },
+  { role: 'VIEWER', desc: '보기만' },
+  { role: 'OPERATOR', desc: '도면·객체 편집 · AI 챗봇' },
+  { role: 'ADMIN', desc: '전부 + 관리자 메뉴' },
 ]
 
 /** 설정 › 사용자: 목록 · 추가 · 수정(이름·역할·사용 여부) · 비밀번호 초기화 */

@@ -20,9 +20,9 @@ describe('ErrorPage', () => {
   })
 
   it('500·403 제목, detail 은 기본 설명을 대신함', () => {
-    const { unmount } = render(<ErrorPage code="500" detail="설비 목록을 불러오지 못했습니다." />)
+    const { unmount } = render(<ErrorPage code="500" detail="도면 목록을 불러오지 못했습니다." />)
     expect(screen.getByRole('heading', { name: '서버에서 오류가 났습니다' })).toBeInTheDocument()
-    expect(screen.getByText('설비 목록을 불러오지 못했습니다.')).toBeInTheDocument()
+    expect(screen.getByText('도면 목록을 불러오지 못했습니다.')).toBeInTheDocument()
     unmount()
     render(<ErrorPage code="403" />)
     expect(screen.getByRole('heading', { name: '이 화면을 볼 권한이 없습니다' })).toBeInTheDocument()

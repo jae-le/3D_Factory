@@ -44,6 +44,7 @@ public class AuthService {
 
     public AppUser authenticate(String username, String password) {
         String name = username == null ? "" : username.trim().toLowerCase();
+        if (name.length() > 32) name = name.substring(0, 32);
         String pwd = password == null ? "" : password;
         AppUser u = users.findByUsername(name);
         if (u == null) {

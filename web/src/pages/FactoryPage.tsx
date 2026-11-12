@@ -8,10 +8,10 @@ import { ErrorPage } from './ErrorPage'
 /** / — 3D 공장 화면. P1 은 레이아웃과 도면 선택까지, 3D 는 P2 */
 export function FactoryPage() {
   const { user } = useAuth()
-  const drawings = useDrawings()
+  const [drawings, retry] = useDrawings()
   const [chosen, setChosen] = useState<number | null>(() => (user ? loadStored(user.username) : null))
   if (drawings.kind === 'error')
-    return <ErrorPage code={drawings.error.kind === 'network' ? 'offline' : '500'} detail={drawings.error.message} />
+    return <ErrorPage code={drawings.error.kind === 'network' ? 'offline' : '500'} detail={drawings.error.message} onRetry={retry} />
   const list = drawings.kind === 'ok' ? drawings.list : []
   const selectedId = pickDrawing(list, chosen)
   const current = list.find((d) => d.id === selectedId)

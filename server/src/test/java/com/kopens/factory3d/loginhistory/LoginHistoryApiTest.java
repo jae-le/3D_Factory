@@ -55,6 +55,8 @@ class LoginHistoryApiTest extends IntegrationTest {
         mvc.perform(get("/api/admin/login-history").with(admin))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(4))
                 .andExpect(jsonPath("$[0].username").value("lee")); // 최신순
+        mvc.perform(get("/api/admin/login-history?username=KIM").with(admin))
+                .andExpect(jsonPath("$.length()").value(3));
         mvc.perform(get("/api/admin/login-history?username=kim&result=FAIL").with(admin))
                 .andExpect(jsonPath("$.length()").value(2));
         String today = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Seoul")).toString();

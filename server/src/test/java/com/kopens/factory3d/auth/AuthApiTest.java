@@ -33,6 +33,14 @@ class AuthApiTest extends IntegrationTest {
     }
 
     @Test
+    void 아주_긴_아이디도_401() throws Exception {
+        mvc.perform(post("/api/auth/login").with(csrf()).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + "a".repeat(40) + "\",\"password\":\"x\"}"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.detail").value("아이디 또는 비밀번호가 틀렸습니다."));
+    }
+
+    @Test
     void 로그인_안_하면_401() throws Exception {
         mvc.perform(get("/api/drawings"))
                 .andExpect(status().isUnauthorized())
@@ -84,7 +92,7 @@ class AuthApiTest extends IntegrationTest {
     }
 
     @Test
-    void 비밀번호_변경이_필요하면_변경_전까지_설비를_못_봄() throws Exception {
+    void 비밀번호_변경이_필요하면_변경_전까지_도면을_못_봄() throws Exception {
         user("kim", "temp1234", Role.OPERATOR, true);
         Cookie s = login("kim", "temp1234");
         mvc.perform(get("/api/drawings").cookie(s)).andExpect(status().isForbidden());

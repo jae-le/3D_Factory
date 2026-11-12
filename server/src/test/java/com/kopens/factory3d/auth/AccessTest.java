@@ -38,6 +38,12 @@ class AccessTest extends IntegrationTest {
     }
 
     @Test
+    void API_문서는_관리자만() throws Exception {
+        mvc.perform(get("/v3/api-docs")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/v3/api-docs").with(user("a").roles("ADMIN"))).andExpect(status().isOk());
+    }
+
+    @Test
     void 로그인_안_하면_401() throws Exception {
         mvc.perform(get("/api/drawings")).andExpect(status().isUnauthorized());
     }

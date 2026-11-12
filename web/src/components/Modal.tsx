@@ -1,3 +1,4 @@
+import { X } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 
 /** DESIGN.md 모달: 직각, 그림자, 어두운 바탕. wide = 넓은 창 (미리보기 등) */
@@ -13,7 +14,7 @@ export function Modal({ title, children, onClose, wide = false }: { title: strin
         <header className="kp-modal-head">
           <h2>{title}</h2>
           <button className="kp-modal-x" aria-label="닫기" onClick={onClose}>
-            ✕
+            <X size={18} aria-hidden="true" />
           </button>
         </header>
         <div className="kp-modal-body">{children}</div>

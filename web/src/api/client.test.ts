@@ -18,10 +18,10 @@ describe('apiJson', () => {
   })
 
   it('404 → notFound, 서버의 한국어 detail 을 메시지로', async () => {
-    vi.stubGlobal('fetch', reply(404, { detail: "설비 'NOPE' 를 찾을 수 없습니다." }))
+    vi.stubGlobal('fetch', reply(404, { detail: "도면 'NOPE' 를 찾을 수 없습니다." }))
     const e = await apiJson('/api/x').catch((x: ApiError) => x)
     expect(e).toBeInstanceOf(ApiError)
-    expect(e).toMatchObject({ kind: 'notFound', status: 404, message: "설비 'NOPE' 를 찾을 수 없습니다." })
+    expect(e).toMatchObject({ kind: 'notFound', status: 404, message: "도면 'NOPE' 를 찾을 수 없습니다." })
   })
 
   it('502·503·504 → network (서버 꺼짐·프록시), 500 → server', async () => {

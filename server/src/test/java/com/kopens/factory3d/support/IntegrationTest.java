@@ -49,6 +49,9 @@ public abstract class IntegrationTest {
 
     /** 이전 실행이 남긴 표·마이그레이션 이력을 지워 Flyway 가 처음부터 돌게 함 */
     private static void resetSchema() {
+        String path = URL.contains("?") ? URL.substring(0, URL.indexOf('?')) : URL;
+        if (!path.substring(path.lastIndexOf('/') + 1).endsWith("_test"))
+            throw new IllegalStateException("테스트 DB 이름은 _test 로 끝나야 합니다: " + URL);
         try (Connection c = DriverManager.getConnection(URL, USER, PASSWORD);
              Statement st = c.createStatement()) {
             st.execute("drop schema public cascade");

@@ -42,7 +42,11 @@ public class LoginHistoryService {
         if (r != null && !RESULTS.contains(r)) throw new BadRequestException("결과는 OK, FAIL, LOCKED, LOGOUT 중 하나입니다.");
         OffsetDateTime f = from == null ? null : from.atStartOfDay(zone).toOffsetDateTime();
         OffsetDateTime t = to == null ? null : to.plusDays(1).atStartOfDay(zone).toOffsetDateTime();
-        return mapper.find(blank(username), r, f, t, Math.max(1, Math.min(limit, 1000)));
+        return mapper.find(lower(blank(username)), r, f, t, Math.max(1, Math.min(limit, 1000)));
+    }
+
+    private static String lower(String s) {
+        return s == null ? null : s.toLowerCase();
     }
 
     private static String blank(String s) {

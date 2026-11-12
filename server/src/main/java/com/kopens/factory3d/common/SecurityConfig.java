@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**", "/api/audit/**", "/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/**").hasRole("VIEWER")
                         .requestMatchers("/api/**").hasRole("OPERATOR")
+                        .requestMatchers("/v3/**", "/swagger-ui/**", "/swagger-ui.html").hasRole("ADMIN")
                         .anyRequest().permitAll())
                 .csrf(c -> c.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))

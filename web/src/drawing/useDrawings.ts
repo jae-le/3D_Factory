@@ -8,8 +8,9 @@ export type DrawingList =
   | { kind: 'error'; error: ApiError }
 
 /** 서버의 도면 목록 */
-export function useDrawings(): DrawingList {
+export function useDrawings(): [DrawingList, () => void] {
   const [state, setState] = useState<DrawingList>({ kind: 'loading' })
+  const [reload, setReload] = useState(0)
   useEffect(() => {
     let cancel = false
     apiJson<DrawingSummary[]>('/api/drawings')
@@ -18,8 +19,14 @@ export function useDrawings(): DrawingList {
     return () => {
       cancel = true
     }
-  }, [])
-  return state
+  }, [reload])
+  return [
+    state,
+    () => {
+      setState({ kind: 'loading' })
+      setReload((n) => n + 1)
+    },
+  ]
 }
 
 /** 기억한 도면이 목록에 있으면 그것, 없으면 첫 도면 */

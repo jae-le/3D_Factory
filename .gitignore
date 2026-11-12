@@ -2,6 +2,6 @@ node_modules/
 dist/
 build/
 .gradle/
-data/
+/data/
 *.log
 web/e2e/shots/
