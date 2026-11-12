@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "seed:plan": "node scripts/seed-plan.mjs"
+    "seed:plan": "node scripts/seed-plan.mjs",
+    "bake:models": "node scripts/bake-models.mjs",
+    "seed:placements": "node scripts/seed-placements.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.57.0",

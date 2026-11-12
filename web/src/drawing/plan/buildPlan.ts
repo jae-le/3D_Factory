@@ -9,9 +9,8 @@ const CODE_UNIT: Record<number, UnitName> = { 1: 'inch', 2: 'feet', 4: 'mm', 5: 
 const r4 = (v: number) => Math.round(v * 1e4) / 1e4
 const hex = (c: number) => '#' + c.toString(16).padStart(6, '0')
 
-/** DXF 해석 결과 + 레이어 규칙 → plan (좌표 m, 원점 = bbox 최소점) */
-export function buildPlan(doc: DxfDoc, flat: Flattened, opts: { rules?: LayerRules; unit?: UnitName } = {}): Plan {
-  const rules = opts.rules ?? {}
+/** prims 의 bbox [x0, y0, x1, y1] (도면 원좌표), 비면 0 */
+function bbox(flat: Flattened): [number, number, number, number] {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity
   for (const p of flat.prims)
     for (const [x, y] of p.kind === 'poly' ? p.pts : [[p.x, p.y] as Pt]) {
@@ -20,7 +19,20 @@ export function buildPlan(doc: DxfDoc, flat: Flattened, opts: { rules?: LayerRul
       if (y < y0) y0 = y
       if (y > y1) y1 = y
     }
-  if (!Number.isFinite(x0)) { x0 = y0 = x1 = y1 = 0 }
+  return Number.isFinite(x0) ? [x0, y0, x1, y1] : [0, 0, 0, 0]
+}
+
+/** prims 의 bbox 최소점 (도면 원좌표) — plan 원점 */
+export function bboxMin(flat: Flattened): [number, number] {
+  const [x0, y0] = bbox(flat)
+  return [x0, y0]
+}
+
+/** DXF 해석 결과 + 레이어 규칙 → plan (좌표 m, 원점 = bbox 최소점) */
+export function buildPlan(doc: DxfDoc, flat: Flattened, opts: { rules?: LayerRules; unit?: UnitName } = {}): Plan {
+  const rules = opts.rules ?? {}
+  const [x0, y0] = bboxMin(flat)
+  const [, , x1, y1] = bbox(flat)
 
   const code = Number(doc.header.$INSUNITS ?? 0)
   const known = CODE_UNIT[code] && INSUNITS[code]?.[1] != null ? CODE_UNIT[code] : null

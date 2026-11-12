@@ -1,0 +1,128 @@
+[
+  {
+    "key": "jigMain",
+    "name": "메인 조립 지그",
+    "category": "equip",
+    "aliases": [
+      "JIG_MAIN",
+      "MAIN JIG"
+    ],
+    "sizeX": 11,
+    "sizeY": 11.79,
+    "sizeZ": 6.931
+  },
+  {
+    "key": "jigSub",
+    "name": "서브 조립 지그",
+    "category": "equip",
+    "aliases": [
+      "JIG_SUB",
+      "SUB JIG"
+    ],
+    "sizeX": 7,
+    "sizeY": 7.79,
+    "sizeZ": 4.931
+  },
+  {
+    "key": "jigHub",
+    "name": "허브 조립 지그",
+    "category": "equip",
+    "aliases": [
+      "JIG_HUB",
+      "HUB JIG"
+    ],
+    "sizeX": 7,
+    "sizeY": 7,
+    "sizeZ": 4.52
+  },
+  {
+    "key": "tensioner",
+    "name": "요 베어링 텐셔너",
+    "category": "equip",
+    "aliases": [
+      "TENSIONER"
+    ],
+    "sizeX": 6.5,
+    "sizeY": 6.5,
+    "sizeZ": 2
+  },
+  {
+    "key": "frameTable",
+    "name": "메인 프레임 조립대",
+    "category": "equip",
+    "aliases": [
+      "FRAME_TABLE"
+    ],
+    "sizeX": 7.16,
+    "sizeY": 4,
+    "sizeZ": 2.656
+  },
+  {
+    "key": "hub",
+    "name": "허브",
+    "category": "mat",
+    "aliases": [
+      "HUB"
+    ],
+    "sizeX": 3.947,
+    "sizeY": 3.595,
+    "sizeZ": 3.67
+  },
+  {
+    "key": "ring",
+    "name": "베어링 링",
+    "category": "mat",
+    "aliases": [
+      "RING",
+      "BEARING"
+    ],
+    "sizeX": 3.3,
+    "sizeY": 3.3,
+    "sizeZ": 0.595
+  },
+  {
+    "key": "mainframe",
+    "name": "메인 프레임",
+    "category": "mat",
+    "aliases": [
+      "MAINFRAME",
+      "MAIN FRAME"
+    ],
+    "sizeX": 5.46,
+    "sizeY": 2.8,
+    "sizeZ": 2.38
+  },
+  {
+    "key": "longmat",
+    "name": "긴 자재 랙",
+    "category": "mat",
+    "aliases": [
+      "LONG_RACK"
+    ],
+    "sizeX": 10,
+    "sizeY": 2.6,
+    "sizeZ": 3.4
+  },
+  {
+    "key": "fixture",
+    "name": "치구 프레임",
+    "category": "mat",
+    "aliases": [
+      "FIXTURE"
+    ],
+    "sizeX": 7,
+    "sizeY": 1.2,
+    "sizeZ": 1.15
+  },
+  {
+    "key": "pallet",
+    "name": "부품 팔레트",
+    "category": "mat",
+    "aliases": [
+      "PALLET"
+    ],
+    "sizeX": 1.2,
+    "sizeY": 1,
+    "sizeZ": 0.925
+  }
+]
