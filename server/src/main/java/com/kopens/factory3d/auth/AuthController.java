@@ -2,6 +2,7 @@ package com.kopens.factory3d.auth;
 
 import com.kopens.factory3d.audit.AuditService;
 import com.kopens.factory3d.common.UnauthorizedException;
+import com.kopens.factory3d.loginhistory.LoginHistoryService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.ResponseEntity;
@@ -30,11 +31,13 @@ public class AuthController {
     private final AuthService auth;
     private final UserMapper users;
     private final AuditService audit;
+    private final LoginHistoryService history;
 
-    public AuthController(AuthService auth, UserMapper users, AuditService audit) {
+    public AuthController(AuthService auth, UserMapper users, AuditService audit, LoginHistoryService history) {
         this.auth = auth;
         this.users = users;
         this.audit = audit;
+        this.history = history;
     }
 
     @PostMapping("/login")
@@ -46,7 +49,10 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(Authentication a, HttpServletRequest req, HttpServletResponse res) {
-        if (a != null) audit.log("LOGOUT", a.getName(), null);
+        if (a != null) {
+            audit.log("LOGOUT", a.getName(), null);
+            history.record(a.getName(), "LOGOUT", null);
+        }
         new SecurityContextLogoutHandler().logout(req, res, a);
         return ResponseEntity.noContent().build();
     }

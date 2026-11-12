@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.loginhistory.LoginHistoryMapper">
+
+    <resultMap id="event" type="com.kopens.factory3d.loginhistory.LoginEvent">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="at" javaType="java.time.OffsetDateTime"/>
+            <arg column="username" javaType="String"/>
+            <arg column="result" javaType="String"/>
+            <arg column="detail" javaType="String"/>
+            <arg column="ip" javaType="String"/>
+            <arg column="user_agent" javaType="String"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        insert into login_history (username, result, detail, ip, user_agent)
+        values (#{username,jdbcType=VARCHAR}, #{result}, #{detail,jdbcType=VARCHAR}, #{ip,jdbcType=VARCHAR},
+                #{userAgent,jdbcType=VARCHAR})
+    </insert>
+
+    <select id="find" resultMap="event">
+        select id, at, username, result, detail, ip, user_agent from login_history
+        <where>
+            <if test="username != null">and username = #{username}</if>
+            <if test="result != null">and result = #{result}</if>
+            <if test="from != null">and at &gt;= #{from}</if>
+            <if test="to != null">and at &lt; #{to}</if>
+        </where>
+        order by id desc
+        limit #{limit}
+    </select>
+</mapper>

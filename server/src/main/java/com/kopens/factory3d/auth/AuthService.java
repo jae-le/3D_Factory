@@ -2,6 +2,7 @@ package com.kopens.factory3d.auth;
 
 import com.kopens.factory3d.audit.AuditService;
 import com.kopens.factory3d.common.BadRequestException;
+import com.kopens.factory3d.loginhistory.LoginHistoryService;
 import com.kopens.factory3d.common.LockedException;
 import com.kopens.factory3d.common.NotFoundException;
 import com.kopens.factory3d.common.UnauthorizedException;
@@ -27,14 +28,16 @@ public class AuthService {
     private final UserMapper users;
     private final PasswordEncoder encoder;
     private final AuditService audit;
+    private final LoginHistoryService history;
     private final ZoneId zone;
     private final String dummyHash; // 없는 아이디도 비밀번호 확인 시간을 같게
 
-    public AuthService(UserMapper users, PasswordEncoder encoder, AuditService audit,
+    public AuthService(UserMapper users, PasswordEncoder encoder, AuditService audit, LoginHistoryService history,
             @Value("${factory3d.time-zone:Asia/Seoul}") String zone) {
         this.users = users;
         this.encoder = encoder;
         this.audit = audit;
+        this.history = history;
         this.zone = ZoneId.of(zone);
         this.dummyHash = encoder.encode("not-a-real-password-1");
     }
@@ -46,11 +49,13 @@ public class AuthService {
         if (u == null) {
             encoder.matches(pwd, dummyHash);
             audit.logAs(name, "LOGIN_FAIL", name, "없는 아이디");
+            history.record(name, "FAIL", "없는 아이디");
             throw new UnauthorizedException(BAD_LOGIN);
         }
         OffsetDateTime now = OffsetDateTime.now();
         if (u.lockedAt(now)) {
             audit.logAs(name, "LOGIN_LOCKED", name, "잠긴 동안 시도");
+            history.record(name, "LOCKED", "잠긴 동안 시도");
             throw new LockedException(lockedMessage(u.lockedUntil()));
         }
         if (!encoder.matches(pwd, u.passwordHash())) {
@@ -58,15 +63,18 @@ public class AuthService {
             OffsetDateTime until = failed >= MAX_FAIL ? now.plus(LOCK) : null;
             users.loginFailed(u.id(), until == null ? failed : 0, until);
             audit.logAs(name, until == null ? "LOGIN_FAIL" : "LOGIN_LOCKED", name, failed + "번째 실패");
+            history.record(name, until == null ? "FAIL" : "LOCKED", failed + "번째 실패");
             if (until != null) throw new LockedException(lockedMessage(until));
             throw new UnauthorizedException(BAD_LOGIN);
         }
         if (!u.enabled()) {
             audit.logAs(name, "LOGIN_FAIL", name, "사용 중지된 계정");
+            history.record(name, "FAIL", "사용 중지된 계정");
             throw new UnauthorizedException("사용이 중지된 계정입니다. 관리자에게 문의하세요.");
         }
         users.loginOk(u.id());
         audit.logAs(name, "LOGIN_OK", name, null);
+        history.record(name, "OK", null);
         return users.findById(u.id());
     }
 
