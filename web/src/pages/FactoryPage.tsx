@@ -10,6 +10,7 @@ import { loadStored, pickDrawing, saveStored, useDrawings } from '../drawing/use
 import { AppShell } from '../layout/AppShell'
 import { DrawingBar } from '../layout/DrawingBar'
 import { modelFileUrl } from '../objects/api'
+import { AddModelDialog } from '../objects/AddModelDialog'
 import { EditTag } from '../objects/EditTag'
 import { cellSize, editCells, editTag, rectOf, snapToCells } from '../objects/grid'
 import { nextName } from '../objects/match'
@@ -58,6 +59,7 @@ export function FactoryPage() {
   const { state, save } = useDrawing(drawingId)
   const detail = state.kind === 'ok' && state.detail.id === drawingId ? state.detail : null
   const [adding, setAdding] = useState(false)
+  const [addingModel, setAddingModel] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
 
   // 객체
@@ -155,13 +157,13 @@ export function FactoryPage() {
   useEffect(() => {
     keys.current = (e) => {
       if (e.key === 'Escape') {
-        if (toolOn || adding || typing(e.target)) return // 도구·창·입력칸이 먼저 Esc 를 받음
+        if (toolOn || adding || addingModel || typing(e.target)) return // 도구·창·입력칸이 먼저 Esc 를 받음
         if (placing) setPlacing(null)
         else if (editing != null) setEditingId(null)
         else setSelId(null)
         return
       }
-      if (!canEdit || !(e.ctrlKey || e.metaKey) || typing(e.target) || adding) return
+      if (!canEdit || !(e.ctrlKey || e.metaKey) || typing(e.target) || adding || addingModel) return
       const k = e.key.toLowerCase()
       if (k === 'z' && !e.shiftKey) {
         e.preventDefault()
@@ -198,7 +200,7 @@ export function FactoryPage() {
     setEditingId(null)
   }
   const pickModel = (m: ModelInfo) => {
-    if (!canEdit) return
+    if (!canEdit || toolOn) return
     setEditingId(null)
     setPlacing((cur) => (cur?.id === m.id ? null : m)) // 같은 카드를 다시 누르면 끝
   }
@@ -294,7 +296,7 @@ export function FactoryPage() {
               placingModelId={placing?.id ?? null}
               onPickModel={pickModel}
               onSelect={selectFromList}
-              onAddModel={() => setToast('객체 추가 창은 준비 중입니다.')}
+              onAddModel={() => setAddingModel(true)}
               onOpenChange={setPanelOpen}
             />
           )}
@@ -312,6 +314,17 @@ export function FactoryPage() {
         </>
       )}
       {adding && <AddDrawingDialog onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); select(id); void refresh() }} />}
+      {addingModel && (
+        <AddModelDialog
+          onClose={() => setAddingModel(false)}
+          onCreated={(m) => {
+            setAddingModel(false)
+            models.reload()
+            setEditingId(null)
+            setPlacing(m)
+          }}
+        />
+      )}
     </AppShell>
   )
 }
