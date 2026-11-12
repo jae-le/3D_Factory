@@ -60,3 +60,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .user-id { margin: 0 0 6px; padding: 4px 8px 8px; font-size: var(--kp-text-12); color: var(--muted); border-bottom: 1px solid var(--line); }
 .user-pop button { width: 100%; display: flex; align-items: center; gap: 8px; height: var(--kp-h-xs); padding: 0 8px; border: 0; border-radius: var(--kp-radius-xs); background: none; color: var(--text); font-size: var(--kp-text-13); text-align: left; }
 .user-pop button:hover { background: #ffffff10; }
+
+/* 관리자 표 위 조회 조건 줄 */
+.kp-filter { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--kp-sp-12); margin-bottom: var(--kp-sp-16); }
+.kp-filter .kp-field { min-width: 160px; }
