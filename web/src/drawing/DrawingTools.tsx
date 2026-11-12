@@ -1,5 +1,5 @@
 import { FlipHorizontal2, RotateCw, Ruler, Scaling } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Modal } from '../components/Modal'
 import type { PickSource } from '../scene/FactoryScene'
 import type { Plan, Pt } from './plan/types'
@@ -8,13 +8,28 @@ import { calibrate, flipPlan, rotate } from './plan/transform'
 type Tool = 'none' | 'measure' | 'calib'
 const dist = (a: Pt, b: Pt) => Math.hypot(b[0] - a[0], b[1] - a[1])
 
+interface Props {
+  scene: PickSource | null
+  plan: Plan
+  canEdit: boolean
+  onSave: (plan: Plan) => Promise<void>
+  /** 측정·보정 도구가 켜지고 꺼질 때 (객체 배치·편집을 끝내게) */
+  onToolChange?: (active: boolean) => void
+}
+
 /** 3D 오른쪽 위 도구줄: 거리 측정(모두) · 스케일 보정 · 90° 회전 · 좌우 반전(운전원 이상) */
-export function DrawingTools({ scene, plan, canEdit, onSave }: { scene: PickSource | null; plan: Plan; canEdit: boolean; onSave: (plan: Plan) => Promise<void> }) {
+export function DrawingTools({ scene, plan, canEdit, onSave, onToolChange }: Props) {
   const [tool, setTool] = useState<Tool>('none')
   const [picks, setPicks] = useState<Pt[]>([])
   const [actual, setActual] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false) // 저장 중 — 연타로 같은 버전 PUT 두 번(409) 방지
+  const toolCb = useRef(onToolChange)
+  useEffect(() => {
+    toolCb.current = onToolChange
+  })
+  useEffect(() => toolCb.current?.(tool !== 'none'), [tool])
+  useEffect(() => () => toolCb.current?.(false), []) // 도면이 바뀌어 도구줄이 사라져도 '꺼짐'으로
 
   const stop = () => {
     setTool('none')

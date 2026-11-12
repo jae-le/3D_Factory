@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { User } from '../api/types'
@@ -22,8 +22,23 @@ const drawings = [
 ]
 const plan = (w: number) => ({ format: 1, unit: 'mm', scale: 0.001, rotQ: 0, flip: 1, bounds: { w, h: 10 }, layers: [], lines: [], texts: [], walls: [], partitions: [], columns: [], zones: [], objectHints: [], warnings: { unsupported: {}, unitGuessed: false } })
 
+const models = [{ id: 1, name: '허브', category: 'mat', sourceExt: 'glb', sizeX: 4, sizeY: 4, sizeZ: 3, aliases: [], version: 1, usedDrawings: 1, updatedAt: '' }]
+let placements: unknown[] = []
+const calls: { method: string; url: string; body: unknown }[] = []
+
 function show(user: User, list: unknown[] = drawings) {
-  vi.stubGlobal('fetch', vi.fn(async (url: string) => {
+  calls.length = 0
+  vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET'
+    if (method !== 'GET') {
+      const body = init?.body ? JSON.parse(String(init.body)) : null
+      calls.push({ method, url, body })
+      if (method === 'DELETE') return { ok: true, status: 204, json: async () => null }
+      if (method === 'POST') return json(200, (body as object[]).map((b, i) => ({ id: 100 + i, ...b })))
+      return json(200, { ...(placements as { id: number }[]).find((p) => url.endsWith(`/${p.id}`)), ...body })
+    }
+    if (url === '/api/models') return json(200, models)
+    if (/\/placements$/.test(url)) return json(200, placements)
     const m = /^\/api\/drawings\/(\d+)$/.exec(url)
     if (m) {
       const d = drawings.find((x) => x.id === Number(m[1]))!
@@ -42,6 +57,7 @@ describe('메인 레이아웃', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
     localStorage.clear()
+    placements = []
   })
 
   it('도면 select: 기억한 도면을 3D 로 그리고, 바꾸면 기억', async () => {
@@ -86,5 +102,30 @@ describe('메인 레이아웃', () => {
   it('관리자는 관리자 메뉴가 보임', async () => {
     show({ ...base, role: 'ADMIN' })
     expect(await screen.findByRole('button', { name: '관리자' })).toBeInTheDocument()
+  })
+
+  it('객체 목록 행을 누르면 정보 카드, 삭제 뒤 Ctrl+Z 로 되살림', async () => {
+    placements = [{ id: 10, modelId: 1, name: '허브 1', x: 1, y: 2, rot: 0 }]
+    show(base)
+    const list = await screen.findByRole('list', { name: '이 도면의 객체' })
+    fireEvent.click(await within(list).findByRole('button', { name: /허브 1/ }))
+    expect(screen.getByLabelText('객체 이름')).toHaveValue('허브 1')
+    fireEvent.click(screen.getByRole('button', { name: /삭제/ }))
+    await waitFor(() => expect(within(list).queryByRole('button')).toBeNull())
+    expect(calls).toEqual([{ method: 'DELETE', url: '/api/placements/10', body: null }])
+    fireEvent.keyDown(window, { key: 'z', ctrlKey: true })
+    expect(await within(list).findByRole('button', { name: /허브 1/ })).toBeInTheDocument()
+    expect(calls[1]).toMatchObject({ method: 'POST', url: '/api/drawings/1/placements', body: [{ modelId: 1, name: '허브 1', x: 1, y: 2, rot: 0 }] })
+  })
+
+  it('Esc 는 선택을 풀고, 조회 권한은 정보 카드를 읽기만', async () => {
+    placements = [{ id: 10, modelId: 1, name: '허브 1', x: 1, y: 2, rot: 0 }]
+    show({ ...base, role: 'VIEWER' })
+    const list = await screen.findByRole('list', { name: '이 도면의 객체' })
+    fireEvent.click(await within(list).findByRole('button', { name: /허브 1/ }))
+    expect(screen.getByLabelText('객체 이름')).toHaveAttribute('readonly')
+    expect(screen.queryByRole('button', { name: /삭제/ })).toBeNull()
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByLabelText('객체 이름')).toBeNull()
   })
 })

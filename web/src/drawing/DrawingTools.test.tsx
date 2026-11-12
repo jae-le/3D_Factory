@@ -22,6 +22,16 @@ function fakeScene() {
 }
 
 describe('도면 도구', () => {
+  it('도구가 켜지고 꺼지면 onToolChange 로 알림', () => {
+    const onToolChange = vi.fn()
+    render(<DrawingTools scene={fakeScene()} plan={plan} canEdit={false} onSave={vi.fn()} onToolChange={onToolChange} />)
+    onToolChange.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: /거리 측정/ }))
+    expect(onToolChange).toHaveBeenLastCalledWith(true)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onToolChange).toHaveBeenLastCalledWith(false)
+  })
+
   it('거리 측정: 두 점 → 거리 표시, Esc 로 끝', () => {
     const s = fakeScene()
     render(<DrawingTools scene={s} plan={plan} canEdit={false} onSave={vi.fn()} />)
