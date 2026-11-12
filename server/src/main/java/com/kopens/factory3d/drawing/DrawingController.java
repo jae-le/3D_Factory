@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.util.List;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,7 +18,7 @@ import tools.jackson.databind.JsonNode;
 @RestController
 @RequestMapping("/api/drawings")
 public class DrawingController {
-    public record PlanSave(int version, JsonNode plan, JsonNode layerRules) {}
+    public record PlanSave(Integer version, JsonNode plan, JsonNode layerRules) {}
 
     public record Rename(String name) {}
 
@@ -39,6 +41,7 @@ public class DrawingController {
     @GetMapping("/{id}/source")
     public ResponseEntity<Resource> source(@PathVariable long id) {
         return ResponseEntity.ok().contentType(MediaType.parseMediaType("application/dxf"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment().filename("source.dxf").build().toString())
                 .body(new FileSystemResource(drawings.source(id)));
     }
 
@@ -46,13 +49,18 @@ public class DrawingController {
     public ResponseEntity<DrawingDetail> create(@RequestParam("file") MultipartFile file, @RequestParam("name") String name,
             @RequestParam("plan") String plan, @RequestParam(value = "layerRules", required = false) String layerRules,
             Authentication auth) throws IOException {
-        DrawingDetail d = drawings.create(file.getOriginalFilename(), file.getBytes(), name, plan, layerRules, auth.getName());
+        // 크기는 메모리에 읽기 전에 확인 (서비스가 크기 검사 뒤에 읽음)
+        DrawingDetail d = drawings.create(file.getOriginalFilename(), file.getSize(), file, name, plan, layerRules, auth.getName());
         return ResponseEntity.status(HttpStatus.CREATED).body(d);
     }
 
     @PutMapping("/{id}/plan")
-    public DrawingDetail savePlan(@PathVariable long id, @RequestBody PlanSave body) {
-        return drawings.savePlan(id, body.version(), body.plan(), body.layerRules());
+    public DrawingDetail savePlan(@PathVariable long id, @RequestBody PlanSave body, Authentication auth) {
+        return drawings.savePlan(id, body.version(), body.plan(), body.layerRules(), isAdmin(auth));
+    }
+
+    private static boolean isAdmin(Authentication auth) {
+        return auth != null && auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
 
     @PatchMapping("/{id}")

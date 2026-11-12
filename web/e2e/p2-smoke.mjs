@@ -24,6 +24,10 @@ try {
   await page.locator('.factory-view canvas').waitFor()
   await page.waitForTimeout(3000) // 첫 렌더·그림자
   await page.screenshot({ path: 'e2e/shots/p2-1-factory-3d.png' })
+  await page.getByRole('button', { name: '고품질' }).click() // → 저사양
+  await page.waitForTimeout(1500)
+  await page.screenshot({ path: 'e2e/shots/p2-1b-factory-3d-low.png' })
+  await page.getByRole('button', { name: '저사양' }).click() // 고품질로 되돌림
 
   await page.getByRole('button', { name: '도면 보기' }).click()
   await page.waitForTimeout(1500)

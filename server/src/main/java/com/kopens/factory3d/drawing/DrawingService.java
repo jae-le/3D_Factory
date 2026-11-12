@@ -4,6 +4,7 @@ import com.kopens.factory3d.audit.AuditService;
 import com.kopens.factory3d.common.BadRequestException;
 import com.kopens.factory3d.common.ConflictException;
 import com.kopens.factory3d.common.DataDir;
+import com.kopens.factory3d.common.ForbiddenException;
 import com.kopens.factory3d.common.NotFoundException;
 import com.kopens.factory3d.common.PayloadTooLargeException;
 import java.io.IOException;
@@ -18,6 +19,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.InputStreamSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
@@ -64,13 +66,20 @@ public class DrawingService {
     }
 
     @Transactional
-    public DrawingDetail create(String fileName, byte[] bytes, String name, String plan, String layerRules, String by) {
+    public DrawingDetail create(String fileName, long size, InputStreamSource src, String name, String plan, String layerRules, String by) {
         if (fileName == null || !fileName.toLowerCase(Locale.ROOT).endsWith(".dxf"))
             throw new BadRequestException("DXF 파일만 올릴 수 있습니다.");
-        if (bytes.length > maxSource) throw new PayloadTooLargeException("도면 파일이 너무 큽니다.");
+        if (size > maxSource) throw new PayloadTooLargeException("도면 파일이 너무 큽니다."); // 읽기 전에 확인
         String n = checkName(name, null);
         String p = checkPlan(plan);
         String r = checkRules(layerRules);
+        byte[] bytes;
+        try (var in = src.getInputStream()) {
+            bytes = in.readNBytes((int) Math.min(maxSource + 1, Integer.MAX_VALUE));
+        } catch (IOException e) {
+            throw new UncheckedIOException("도면 원본을 읽지 못했습니다.", e);
+        }
+        if (bytes.length > maxSource) throw new PayloadTooLargeException("도면 파일이 너무 큽니다.");
         long id = insert(n, p, r, by, bytes);
         audit.log("DRAWING_CREATE", n, "id=" + id);
         return get(id);
@@ -85,10 +94,14 @@ public class DrawingService {
     }
 
     @Transactional
-    public DrawingDetail savePlan(long id, int version, JsonNode plan, JsonNode layerRules) {
-        get(id);
+    public DrawingDetail savePlan(long id, Integer version, JsonNode plan, JsonNode layerRules, boolean admin) {
+        DrawingDetail cur = get(id);
+        if (version == null) throw new BadRequestException("버전이 필요합니다.");
         String p = checkPlan(plan == null ? null : plan.toString());
         String r = checkRules(layerRules == null ? null : layerRules.toString());
+        // 레이어 규칙은 관리자만 (운전원의 보정·회전 저장은 같은 규칙을 그대로 보냄)
+        if (!admin && !json.readTree(r).equals(json.readTree(checkRules(cur.layerRules()))))
+            throw new ForbiddenException("레이어 규칙은 관리자만 바꿀 수 있습니다.");
         if (drawings.updatePlan(id, version, p, r) == 0) throw new ConflictException("다른 사람이 먼저 수정했습니다.");
         audit.log("DRAWING_UPDATE", get(id).name(), "id=" + id + " version=" + (version + 1));
         return get(id);

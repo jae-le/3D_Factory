@@ -22,7 +22,10 @@ export interface PickSource {
 }
 
 const SNAP_PX = 12
-const MARK_COLOR = 0x1f6feb
+const MARK_COLOR = 0xff5a1f // 측정 점·선: 밝은 바닥·어두운 도면 양쪽에서 잘 보이는 주황
+const MARK_Y = 0.06
+const BG_3D = 0xc3cad2
+const BG_PLAN = 0x0e1013
 
 /** 그리드 칸 간격 (demo niceStep) */
 const niceStep = (gs: number) => (gs > 400 ? 10 : gs > 80 ? 5 : gs > 20 ? 1 : 0.5)
@@ -52,17 +55,19 @@ export class FactoryScene implements PickSource {
   private composer: EffectComposer
   private passes: { dispose(): void }[]
   private envTex: THREE.Texture
-  private hemi = new THREE.HemisphereLight(0xffffff, 0x8a8f96, 0.5)
-  private sun = new THREE.DirectionalLight(0xfff3e0, 2.4)
+  private hemi = new THREE.HemisphereLight(0xffffff, 0x5c6168, 0.3)
+  private sun = new THREE.DirectionalLight(0xfff3e0, 2.2)
+  private bg = new THREE.Color(BG_3D)
+  private fog = new THREE.Fog(BG_3D, 100, 300)
   private tex: Textures
   private mats: Materials
   private ground: THREE.Mesh
   private grid: THREE.GridHelper | null = null
   private root = new THREE.Group() // 회전·반전 (plan.rotQ, plan.flip)
   private overlay = new THREE.Group() // 측정 점·선 (root 아래)
-  private markGeo = new THREE.CircleGeometry(0.25, 24)
-  private markMat = new THREE.MeshBasicMaterial({ color: MARK_COLOR })
-  private markLineMat = new THREE.LineBasicMaterial({ color: MARK_COLOR })
+  // 측정 점: 화면 크기 고정 점, 선: 항상 위에 (깊이 무시)
+  private markMat = new THREE.PointsMaterial({ color: MARK_COLOR, size: 12, sizeAttenuation: false, depthTest: false, toneMapped: false, transparent: true })
+  private markLineMat = new THREE.LineBasicMaterial({ color: MARK_COLOR, depthTest: false, toneMapped: false, transparent: true })
   private meshes: PlanMeshes | null = null
   private plan: Plan | null = null
   private planKey: string | number | undefined
@@ -84,7 +89,7 @@ export class FactoryScene implements PickSource {
     const renderer = (this.renderer = new THREE.WebGLRenderer({ antialias: true }))
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.05
+    renderer.toneMappingExposure = 0.85
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFShadowMap // 0.186: PCFSoftShadowMap 제거됨 (PCFShadowMap 가 부드러운 그림자)
     renderer.domElement.style.display = 'block'
@@ -93,6 +98,7 @@ export class FactoryScene implements PickSource {
     const controls = (this.controls = new OrbitControls(this.camera, renderer.domElement))
     controls.enableDamping = true
     controls.maxPolarAngle = Math.PI / 2 - 0.02
+    controls.minDistance = 2
 
     // 조명: 실내 환경맵(반사·간접광) + 반구광 + 그림자 내리는 태양광
     const pmrem = new THREE.PMREMGenerator(renderer)
@@ -148,6 +154,10 @@ export class FactoryScene implements PickSource {
     if (this.meshes) {
       this.root.remove(this.meshes.group)
       disposeGroup(this.meshes.group)
+      for (const z of this.meshes.zoneLabels) {
+        z.dark.dispose()
+        z.light.dispose()
+      }
       this.meshes = null
     }
     this.plan = plan
@@ -196,17 +206,19 @@ export class FactoryScene implements PickSource {
     this.clearOverlay()
     const plan = this.plan
     if (!plan) return
+    if (!pts.length) return
     const at = pts.map(([x, y]) => {
       const [lx, lz] = planToLocal(x, y, plan.bounds)
-      return new THREE.Vector3(lx, 0.03, lz)
+      return new THREE.Vector3(lx, MARK_Y, lz)
     })
-    for (const p of at) {
-      const dot = new THREE.Mesh(this.markGeo, this.markMat)
-      dot.rotation.x = -Math.PI / 2
-      dot.position.copy(p)
-      this.overlay.add(dot)
+    if (at.length >= 2) {
+      const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(at), this.markLineMat)
+      line.renderOrder = 10
+      this.overlay.add(line)
     }
-    if (at.length >= 2) this.overlay.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(at), this.markLineMat))
+    const dots = new THREE.Points(new THREE.BufferGeometry().setFromPoints(at), this.markMat)
+    dots.renderOrder = 11
+    this.overlay.add(dots)
   }
 
   dispose(): void {
@@ -220,7 +232,6 @@ export class FactoryScene implements PickSource {
     dom.removeEventListener('dblclick', this.onDblClick)
     this.controls.dispose()
     this.setPlan(null)
-    this.markGeo.dispose()
     this.markMat.dispose()
     this.markLineMat.dispose()
     if (this.grid) this.grid.dispose()
@@ -232,6 +243,7 @@ export class FactoryScene implements PickSource {
     this.sun.shadow.map?.dispose()
     for (const p of this.passes) p.dispose()
     this.composer.dispose()
+    this.renderer.forceContextLoss() // 브라우저 WebGL 컨텍스트 수 제한 — 바로 돌려줌
     this.renderer.dispose()
     dom.remove()
   }
@@ -256,14 +268,28 @@ export class FactoryScene implements PickSource {
     this.camera.updateProjectionMatrix()
   }
 
+  /** 카메라 거리 기준 크기: 작은 도면·높은 벽도 한눈에 (세로 화면이면 더 멀리) */
+  private camSpan(): number {
+    let hMax = 0
+    const p = this.plan
+    if (p) {
+      for (const w of p.walls) hMax = Math.max(hMax, w.h)
+      for (const w of p.partitions) hMax = Math.max(hMax, w.h)
+      for (const c of p.columns) hMax = Math.max(hMax, c.h)
+    }
+    let s = Math.max(this.span, hMax * 8, 40)
+    if (this.camera.aspect < 1) s /= this.camera.aspect
+    return s
+  }
+
   /** 새 도면: 범위에 맞춰 near/far 와 비스듬한 시점 (demo 910~911) */
   private resetCamera() {
-    const span = this.span
-    this.camera.near = span / 1000
-    this.camera.far = span * 50
+    const span = this.span, cs = this.camSpan()
+    this.camera.near = Math.max(0.1, span / 400)
+    this.camera.far = Math.max(span, cs) * 50
     this.camera.updateProjectionMatrix()
     this.controls.target.set(0, 0, 0)
-    this.camera.position.set(-span * 0.25, span * 0.55, span * 0.75)
+    this.camera.position.set(-cs * 0.25, cs * 0.55, cs * 0.75)
     this.controls.update()
     this.nav.cancel()
     this.camMode = '3d'
@@ -273,8 +299,10 @@ export class FactoryScene implements PickSource {
   private applyLook() {
     const is3d = this.mode === '3d', span = this.span
     const { scene, sun } = this
-    scene.background = new THREE.Color(is3d ? 0xd9dee4 : 0x0e1013)
-    scene.fog = is3d ? new THREE.Fog(0xd9dee4, span * 2.2, span * 6) : null
+    scene.background = this.bg.setHex(is3d ? BG_3D : BG_PLAN)
+    this.fog.near = span * 2.2
+    this.fog.far = span * 6
+    scene.fog = is3d ? this.fog : null
     this.ground.material = is3d ? this.mats.ground3d : this.mats.groundPlan
     this.tex.concrete.repeat.set((span * 3) / 4, (span * 3) / 4)
     if (this.grid) this.grid.visible = !is3d
@@ -289,9 +317,10 @@ export class FactoryScene implements PickSource {
         m.color.setHex(is3d ? 0x2c3138 : 0xffffff)
         m.opacity = is3d ? 0.6 : 1
       }
+      for (const z of this.meshes.zoneLabels) z.sprite.material.map = is3d ? z.dark : z.light
     }
-    this.hemi.intensity = is3d ? 0.35 : 0.9
-    sun.intensity = is3d ? 3.2 : 1.4
+    this.hemi.intensity = is3d ? 0.3 : 0.9
+    sun.intensity = is3d ? 2.2 : 1.4
     this.renderer.shadowMap.enabled = is3d
     const sz = this.quality === 'high' ? 4096 : 2048
     if (sun.shadow.mapSize.x !== sz) {
@@ -311,9 +340,9 @@ export class FactoryScene implements PickSource {
 
     // 보기가 바뀌면 카메라: 도면 보기 = 위에서 내려다봄, 3D = 비스듬히
     if (this.camMode !== this.mode) {
-      const t = this.controls.target
-      if (is3d) this.camera.position.set(t.x - span * 0.25, t.y + span * 0.55, t.z + span * 0.75)
-      else this.camera.position.set(t.x, t.y + span * 1.2, t.z + 0.001)
+      const t = this.controls.target, cs = this.camSpan()
+      if (is3d) this.camera.position.set(t.x - cs * 0.25, t.y + cs * 0.55, t.z + cs * 0.75)
+      else this.camera.position.set(t.x, t.y + cs * 1.2, t.z + 0.001)
       this.nav.cancel()
       this.controls.update()
       this.camMode = this.mode
@@ -321,7 +350,7 @@ export class FactoryScene implements PickSource {
   }
 
   private clearOverlay() {
-    for (const o of this.overlay.children) if ((o as THREE.Line).isLine) (o as THREE.Line).geometry.dispose()
+    for (const o of this.overlay.children) (o as THREE.Line | THREE.Points).geometry.dispose()
     this.overlay.clear()
   }
 

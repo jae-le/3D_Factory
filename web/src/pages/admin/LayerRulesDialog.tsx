@@ -26,6 +26,10 @@ export function LayerRulesDialog({ id, onClose, onSaved }: { id: number; onClose
   }, [id])
   const set = (name: string, patch: Partial<LayerRules[string]>) =>
     setRules((r) => ({ ...r, [name]: { ...r[name], ...patch } as LayerRules[string] }))
+  // 외벽·가벽은 높이·두께, 기둥은 높이가 0 보다 커야 함
+  const invalid = Object.values(rules).some(
+    (r) => (['wall', 'partition', 'column'].includes(r.role) && !((r.height ?? 0) > 0)) || (['wall', 'partition'].includes(r.role) && !((r.thickness ?? 0) > 0)),
+  )
   const save = async () => {
     if (!detail) return
     setBusy(true)
@@ -72,9 +76,10 @@ export function LayerRulesDialog({ id, onClose, onSaved }: { id: number; onClose
         </table>
       )}
       {error && <p className="kp-error-text">{error}</p>}
+      {detail && invalid && <p className="kp-error-text">외벽·가벽은 높이와 두께, 기둥은 높이를 0 보다 크게 입력하세요.</p>}
       <div className="kp-modal-actions">
         <button type="button" className="kp-btn kp-btn-stroke" onClick={onClose}>취소</button>
-        <button type="button" className="kp-btn kp-btn-primary" disabled={!detail || busy} onClick={save}>저장 후 다시 해석</button>
+        <button type="button" className="kp-btn kp-btn-primary" disabled={!detail || busy || invalid} onClick={save}>저장 후 다시 해석</button>
       </div>
     </Modal>
   )

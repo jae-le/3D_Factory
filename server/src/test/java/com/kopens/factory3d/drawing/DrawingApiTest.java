@@ -69,6 +69,8 @@ class DrawingApiTest extends IntegrationTest {
         byte[] src = mvc.perform(get("/api/drawings/" + id + "/source").with(VIEWER))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
         assertThat(src).isEqualTo(DXF);
+        mvc.perform(get("/api/drawings/" + id + "/source").with(VIEWER))
+                .andExpect(header().string("Content-Disposition", "attachment; filename=\"source.dxf\""));
         assertThat(Files.exists(dataDir.resolve("drawings/" + id + "/source.dxf"))).isTrue();
         assertThat(jdbc.queryForObject("select count(*) from audit_log where action = 'DRAWING_CREATE'", Integer.class)).isEqualTo(1);
     }
@@ -102,12 +104,12 @@ class DrawingApiTest extends IntegrationTest {
     void plan_저장은_버전을_올리고_어긋나면_409() throws Exception {
         long id = create("보정");
         String body = "{\"version\":1,\"plan\":" + PLAN.replace("\"rotQ\":0", "\"rotQ\":1") + ",\"layerRules\":{\"WALL\":{\"role\":\"partition\"}}}";
-        mvc.perform(put("/api/drawings/" + id + "/plan").contentType(MediaType.APPLICATION_JSON).content(body).with(OPERATOR).with(csrf()))
+        mvc.perform(put("/api/drawings/" + id + "/plan").contentType(MediaType.APPLICATION_JSON).content(body).with(ADMIN).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.version").value(2))
                 .andExpect(jsonPath("$.plan.rotQ").value(1))
                 .andExpect(jsonPath("$.layerRules.WALL.role").value("partition"));
-        mvc.perform(put("/api/drawings/" + id + "/plan").contentType(MediaType.APPLICATION_JSON).content(body).with(OPERATOR).with(csrf()))
+        mvc.perform(put("/api/drawings/" + id + "/plan").contentType(MediaType.APPLICATION_JSON).content(body).with(ADMIN).with(csrf()))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.detail").value("다른 사람이 먼저 수정했습니다."));
     }
 
@@ -132,5 +134,32 @@ class DrawingApiTest extends IntegrationTest {
         assertThat(Files.exists(dir)).isFalse();
         mvc.perform(get("/api/drawings/" + id).with(VIEWER))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("도면을 찾을 수 없습니다."));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions putPlan(long id, String body, RequestPostProcessor who) throws Exception {
+        return mvc.perform(put("/api/drawings/" + id + "/plan").contentType(MediaType.APPLICATION_JSON).content(body).with(who).with(csrf()));
+    }
+
+    @Test
+    void plan_저장_권한_없는_도면_버전_없음() throws Exception {
+        long id = create("저장 오류");
+        String ok = "{\"version\":1,\"plan\":" + PLAN + ",\"layerRules\":{}}";
+        putPlan(id, ok, VIEWER).andExpect(status().isForbidden());
+        putPlan(id + 999, ok, OPERATOR).andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("도면을 찾을 수 없습니다."));
+        putPlan(id, "{\"plan\":" + PLAN + ",\"layerRules\":{}}", OPERATOR)
+                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.detail").value("버전이 필요합니다."));
+    }
+
+    @Test
+    void 레이어_규칙은_관리자만_바꿈_운전원은_같은_규칙으로_회전_저장() throws Exception {
+        long id = create("규칙 권한");
+        String changed = "{\"version\":1,\"plan\":" + PLAN + ",\"layerRules\":{\"WALL\":{\"role\":\"partition\"}}}";
+        putPlan(id, changed, OPERATOR)
+                .andExpect(status().isForbidden()).andExpect(jsonPath("$.detail").value("레이어 규칙은 관리자만 바꿀 수 있습니다."));
+        putPlan(id, changed, ADMIN).andExpect(status().isOk()).andExpect(jsonPath("$.version").value(2));
+        // 키 순서가 달라도 같은 규칙이면 허용
+        jdbc.update("update drawing set layer_rules = cast(? as jsonb) where id = ?", "{\"WALL\":{\"role\":\"partition\",\"height\":1.2}}", id);
+        String rot = "{\"version\":2,\"plan\":" + PLAN.replace("\"rotQ\":0", "\"rotQ\":1") + ",\"layerRules\":{\"WALL\":{\"height\":1.2,\"role\":\"partition\"}}}";
+        putPlan(id, rot, OPERATOR).andExpect(status().isOk()).andExpect(jsonPath("$.plan.rotQ").value(1)).andExpect(jsonPath("$.version").value(3));
     }
 }

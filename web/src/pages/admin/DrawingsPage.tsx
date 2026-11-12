@@ -15,6 +15,8 @@ export function DrawingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [dialog, setDialog] = useState<Dialog>(null)
   const [name, setName] = useState('')
+  const [dialogError, setDialogError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
   const load = useCallback(() => {
     apiJson<DrawingSummary[]>('/api/drawings').then(setRows).catch((e: Error) => setError(e.message))
   }, [])
@@ -23,14 +25,21 @@ export function DrawingsPage() {
     setDialog(null)
     load()
   }
+  const open = (d: Dialog) => {
+    setDialogError(null)
+    setDialog(d)
+  }
+  /** 실패하면 창을 열어 둔 채 창 안에 오류 표시 (입력한 이름 유지) */
   const run = async (f: () => Promise<unknown>) => {
-    setError(null)
+    setDialogError(null)
+    setBusy(true)
     try {
       await f()
       done()
     } catch (e) {
-      setError((e as Error).message)
-      setDialog(null)
+      setDialogError((e as Error).message)
+    } finally {
+      setBusy(false)
     }
   }
   const rename = (e: FormEvent) => {
@@ -65,13 +74,13 @@ export function DrawingsPage() {
                 <td className="mono">{d.createdBy ?? '—'}</td>
                 <td>{when(d.updatedAt)}</td>
                 <td className="actions">
-                  <button className="kp-btn kp-btn-stroke kp-btn-xs" aria-label={`${d.name} 이름 바꾸기`} onClick={() => { setName(d.name); setDialog({ kind: 'rename', d }) }}>
+                  <button className="kp-btn kp-btn-stroke kp-btn-xs" aria-label={`${d.name} 이름 바꾸기`} onClick={() => { setName(d.name); open({ kind: 'rename', d }) }}>
                     <Pencil size={14} aria-hidden />
                   </button>
-                  <button className="kp-btn kp-btn-stroke kp-btn-xs" aria-label={`${d.name} 레이어 규칙`} onClick={() => setDialog({ kind: 'rules', d })}>
+                  <button className="kp-btn kp-btn-stroke kp-btn-xs" aria-label={`${d.name} 레이어 규칙`} onClick={() => open({ kind: 'rules', d })}>
                     <Layers size={14} aria-hidden />
                   </button>
-                  <button className="kp-btn kp-btn-danger kp-btn-xs" aria-label={`${d.name} 삭제`} onClick={() => setDialog({ kind: 'delete', d })}>
+                  <button className="kp-btn kp-btn-danger kp-btn-xs" aria-label={`${d.name} 삭제`} onClick={() => open({ kind: 'delete', d })}>
                     <Trash2 size={14} aria-hidden />
                   </button>
                 </td>
@@ -87,9 +96,10 @@ export function DrawingsPage() {
               <span>새 이름</span>
               <input className="kp-input" value={name} maxLength={100} autoFocus onChange={(e) => setName(e.target.value)} />
             </label>
+            {dialogError && <p className="kp-error-text" role="alert">{dialogError}</p>}
             <div className="kp-modal-actions">
               <button type="button" className="kp-btn kp-btn-stroke" onClick={() => setDialog(null)}>취소</button>
-              <button type="submit" className="kp-btn kp-btn-primary" disabled={!name.trim()}>저장</button>
+              <button type="submit" className="kp-btn kp-btn-primary" disabled={!name.trim() || busy}>저장</button>
             </div>
           </form>
         </Modal>
@@ -98,9 +108,10 @@ export function DrawingsPage() {
       {dialog?.kind === 'delete' && (
         <Modal title="도면 삭제" onClose={() => setDialog(null)}>
           <p className="kp-desc">{`'${dialog.d.name}' 도면을 삭제합니다. 원본 파일까지 삭제됩니다.`}</p>
+          {dialogError && <p className="kp-error-text" role="alert">{dialogError}</p>}
           <div className="kp-modal-actions">
             <button type="button" className="kp-btn kp-btn-stroke" onClick={() => setDialog(null)}>취소</button>
-            <button type="button" className="kp-btn kp-btn-danger-fill" onClick={() => run(() => deleteDrawing(dialog.d.id))}>삭제</button>
+            <button type="button" className="kp-btn kp-btn-danger-fill" disabled={busy} onClick={() => run(() => deleteDrawing(dialog.d.id))}>삭제</button>
           </div>
         </Modal>
       )}

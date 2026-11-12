@@ -2,7 +2,11 @@ import * as THREE from 'three'
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 const NAV_KEYS = new Set(['w', 'a', 's', 'd', 'q', 'e', 'r', 'f', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'])
-const typing = () => /INPUT|SELECT|TEXTAREA/.test(document.activeElement?.tagName ?? '')
+/** 글자 입력 중이거나 대화 상자 안에 포커스가 있으면 이동 키 무시 */
+const typing = () => {
+  const el = document.activeElement
+  return /INPUT|SELECT|TEXTAREA/.test(el?.tagName ?? '') || !!el?.closest('[role=dialog]')
+}
 
 interface CamAnim { t0: number; dur: number; fT: THREE.Vector3; tT: THREE.Vector3; fP: THREE.Vector3; tP: THREE.Vector3 }
 

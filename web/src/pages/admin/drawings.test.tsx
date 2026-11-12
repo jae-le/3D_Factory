@@ -75,4 +75,28 @@ describe('관리자 › 도면 관리', () => {
     fireEvent.click(screen.getByRole('button', { name: '삭제' }))
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/drawings/1', expect.objectContaining({ method: 'DELETE' })))
   })
+
+  it('이름 바꾸기 실패: 창을 열어 둔 채 창 안에 오류, 입력한 이름 유지', async () => {
+    show((_url, init) => (init?.method === 'PATCH' ? json(409, { detail: '같은 이름의 도면이 있습니다.' }) : null))
+    fireEvent.click(await screen.findByRole('button', { name: '나셀 공장 이름 바꾸기' }))
+    fireEvent.change(screen.getByLabelText('새 이름'), { target: { value: '2공장' } })
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+    const dialog = screen.getByRole('dialog', { name: '이름 바꾸기' })
+    expect(await within(dialog).findByText('같은 이름의 도면이 있습니다.')).toBeInTheDocument()
+    expect(within(dialog).getByLabelText('새 이름')).toHaveValue('2공장')
+  })
+
+  it('레이어 규칙: 외벽 높이가 0 이면 저장 못 함', async () => {
+    show(() => null)
+    fireEvent.click(await screen.findByRole('button', { name: '나셀 공장 레이어 규칙' }))
+    const role = await screen.findByLabelText('외곽 역할')
+    fireEvent.change(role, { target: { value: 'wall' } })
+    const save = screen.getByRole('button', { name: '저장 후 다시 해석' })
+    expect(save).toBeEnabled()
+    fireEvent.change(screen.getByLabelText('외곽 높이'), { target: { value: '0' } })
+    expect(save).toBeDisabled()
+    fireEvent.change(screen.getByLabelText('외곽 높이'), { target: { value: '3' } })
+    fireEvent.change(screen.getByLabelText('외곽 두께'), { target: { value: '' } })
+    expect(save).toBeDisabled()
+  })
 })

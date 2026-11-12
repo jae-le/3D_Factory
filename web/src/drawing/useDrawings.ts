@@ -7,8 +7,8 @@ export type DrawingList =
   | { kind: 'ok'; list: DrawingSummary[] }
   | { kind: 'error'; error: ApiError }
 
-/** 서버의 도면 목록 */
-export function useDrawings(): [DrawingList, () => void] {
+/** 서버의 도면 목록. [상태, 다시 시도(불러오는 중 표시), 조용히 새로 고침(화면 유지)] */
+export function useDrawings(): [DrawingList, () => void, () => Promise<void>] {
   const [state, setState] = useState<DrawingList>({ kind: 'loading' })
   const [reload, setReload] = useState(0)
   useEffect(() => {
@@ -26,6 +26,10 @@ export function useDrawings(): [DrawingList, () => void] {
       setState({ kind: 'loading' })
       setReload((n) => n + 1)
     },
+    () =>
+      apiJson<DrawingSummary[]>('/api/drawings')
+        .then((list) => setState({ kind: 'ok', list }))
+        .catch(() => setReload((n) => n + 1)), // 실패하면 평소처럼 다시 불러옴
   ]
 }
 

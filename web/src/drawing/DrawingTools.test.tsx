@@ -70,8 +70,23 @@ describe('도면 도구', () => {
     fireEvent.click(screen.getByRole('button', { name: /90° 회전/ }))
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1))
     expect((onSave.mock.calls[0] as unknown as [Plan])[0].rotQ).toBe(1)
+    await waitFor(() => expect(screen.getByRole('button', { name: /좌우 반전/ })).toBeEnabled())
     fireEvent.click(screen.getByRole('button', { name: /좌우 반전/ }))
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(2))
     expect((onSave.mock.calls[1] as unknown as [Plan])[0].flip).toBe(-1)
+  })
+
+  it('저장 중에는 회전·반전 막음 (연타해도 한 번만 저장)', async () => {
+    let done = () => {}
+    const onSave = vi.fn(() => new Promise<void>((r) => { done = r }))
+    render(<DrawingTools scene={fakeScene()} plan={plan} canEdit onSave={onSave} />)
+    const rot = screen.getByRole('button', { name: /90° 회전/ })
+    fireEvent.click(rot)
+    fireEvent.click(rot)
+    expect(onSave).toHaveBeenCalledTimes(1)
+    expect(rot).toBeDisabled()
+    expect(screen.getByRole('button', { name: /좌우 반전/ })).toBeDisabled()
+    await act(async () => done())
+    expect(rot).toBeEnabled()
   })
 })

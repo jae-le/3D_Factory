@@ -27,7 +27,7 @@ function loadView(): ViewPref {
 /** / — 3D 공장 화면: 도면 select · 3D · 보기 전환 · 정보 카드 (도구·추가는 Task 7·8 에서) */
 export function FactoryPage() {
   const { user } = useAuth()
-  const [drawings, retry] = useDrawings()
+  const [drawings, retry, refresh] = useDrawings()
   const [chosen, setChosen] = useState<number | null>(() => (user ? loadStored(user.username) : null))
   const [pref, setPref] = useState<ViewPref>(loadView)
   const [scene, setScene] = useState<PickSource | null>(null)
@@ -99,7 +99,7 @@ export function FactoryPage() {
           )}
         </>
       )}
-      {adding && <AddDrawingDialog onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); select(id); retry() }} />}
+      {adding && <AddDrawingDialog onClose={() => setAdding(false)} onCreated={(id) => { setAdding(false); select(id); void refresh() }} />}
     </AppShell>
   )
 }

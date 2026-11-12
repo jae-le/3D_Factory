@@ -2,7 +2,7 @@ import * as THREE from 'three'
 import { describe, expect, it } from 'vitest'
 import type { Plan } from '../drawing/plan/types'
 import { createMaterials } from './materials'
-import { planToMeshes } from './planToMeshes'
+import { centroid, planToMeshes } from './planToMeshes'
 
 const plan: Plan = {
   format: 1, unit: 'm', scale: 1, rotQ: 0, flip: 1, bounds: { w: 10, h: 4 },
@@ -49,13 +49,26 @@ describe('planToMeshes', () => {
     expect(parts[0].position.y).toBeCloseTo(0.6)
   })
 
-  it('기둥은 H빔 묶음, 구역은 바닥 면 하나', () => {
+  it('기둥은 H빔 묶음, 구역은 바닥 면 하나 + 테두리', () => {
     const cols = child(m.group, 'solids').children.filter((o) => o.userData.kind === 'column')
     expect(cols).toHaveLength(1)
     expect((cols[0] as THREE.Group).children).toHaveLength(4)
     const zones = child(m.group, 'zones').children
-    expect(zones).toHaveLength(1)
-    expect(zones[0].userData).toMatchObject({ kind: 'zone', id: 'z1', name: 'Hub' })
+    const faces = zones.filter((o) => o.userData.kind === 'zone') as THREE.Mesh[]
+    expect(faces).toHaveLength(1)
+    expect(faces[0].userData).toMatchObject({ kind: 'zone', id: 'z1', name: 'Hub' })
+    expect((faces[0].material as THREE.MeshBasicMaterial).toneMapped).toBe(false)
+    const edges = zones.filter((o) => o.userData.kind === 'zoneEdge') as THREE.LineLoop[]
+    expect(edges).toHaveLength(1)
+    expect(edges[0].geometry.attributes.position.count).toBe(4)
+    expect(edges[0].position.y + edges[0].geometry.attributes.position.getY(0)).toBeGreaterThan(faces[0].position.y)
+  })
+
+  it('구역 이름 표 자리: 다각형 무게중심', () => {
+    expect(centroid([[1, 1], [3, 1], [3, 3], [1, 3]])).toEqual([2, 2])
+    expect(centroid([[0, 0], [4, 0], [0, 4]])[0]).toBeCloseTo(4 / 3)
+    expect(centroid([[0, 0], [2, 0]])).toEqual([1, 0]) // 넓이 0 → 평균
+    expect(m.zoneLabels).toHaveLength(0) // labels:false
   })
 
   it('바닥 선: 레이어마다 LineSegments, 꺼진 레이어는 숨김, 끝점 목록', () => {
