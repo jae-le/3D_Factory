@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Modal } from '../components/Modal'
 import { createDrawing } from './api'
 import { interpretDxf } from './plan/interpret'
@@ -18,20 +18,31 @@ export function AddDrawingDialog({ onClose, onCreated }: { onClose: () => void; 
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
+  const pickSeq = useRef(0)
   const choose = async (file: File | undefined) => {
+    const seq = ++pickSeq.current
     setError(null)
     setLoaded(null)
     if (!file) return
     try {
-      const text = readDxfFile(await bytesOf(file))
+      const buf = await bytesOf(file)
+      if (seq !== pickSeq.current) return
+      const text = readDxfFile(buf)
       const plan = interpretDxf(text)
       setLoaded({ file, text, plan, guessed: plan.warnings.unitGuessed })
       setName(file.name.replace(/\.[^.]+$/, ''))
     } catch (e) {
+      if (seq === pickSeq.current) setError((e as Error).message)
+    }
+  }
+  const setUnit = (unit: UnitName) => {
+    if (!loaded) return
+    try {
+      setLoaded({ ...loaded, plan: interpretDxf(loaded.text, { unit }) })
+    } catch (e) {
       setError((e as Error).message)
     }
   }
-  const setUnit = (unit: UnitName) => loaded && setLoaded({ ...loaded, plan: interpretDxf(loaded.text, { unit }) })
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     if (!loaded) return

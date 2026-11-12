@@ -55,4 +55,20 @@ describe('도면 추가 창', () => {
     fireEvent.click(screen.getByRole('button', { name: '등록' }))
     expect(await screen.findByText('같은 이름의 도면이 있습니다.')).toBeInTheDocument()
   })
+
+  it('먼저 고른 파일이 늦게 읽혀도 나중에 고른 파일 결과가 유지됨', async () => {
+    render(<AddDrawingDialog onClose={vi.fn()} onCreated={vi.fn()} />)
+    const slow = dxfFile(dxfText({ ents: [line('WALL', 0, 0, 10, 0)] }), 'A.dxf')
+    let release: () => void = () => {}
+    const gate = new Promise<void>((r) => (release = r))
+    const real = slow.arrayBuffer ? slow.arrayBuffer.bind(slow) : () => new Response(slow).arrayBuffer()
+    Object.defineProperty(slow, 'arrayBuffer', { value: async () => { await gate; return real() } })
+    pick(slow)
+    pick(dxfFile(dxfText({ insunits: 6, ents: [line('WALL', 0, 0, 10, 0), rect('PARTITION', 0, 0, 2, 1)] }), 'B.dxf'))
+    expect(await screen.findByText('벽 1 · 가벽 1 · 기둥 0 · 구역 0 · 객체 표기 0')).toBeInTheDocument()
+    release()
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.getByLabelText('도면 이름')).toHaveValue('B')
+    expect(screen.getByText('벽 1 · 가벽 1 · 기둥 0 · 구역 0 · 객체 표기 0')).toBeInTheDocument()
+  })
 })

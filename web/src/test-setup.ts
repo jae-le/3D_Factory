@@ -4,3 +4,6 @@ import { afterEach } from 'vitest'
 
 // 테스트마다 그린 화면 정리 (vitest globals 미사용 시 자동 정리가 안 됨)
 afterEach(() => cleanup())
+
+// jsdom 에는 canvas 가 없어 getContext 가 경고를 찍음 — 조용히 null
+HTMLCanvasElement.prototype.getContext = (() => null) as typeof HTMLCanvasElement.prototype.getContext
