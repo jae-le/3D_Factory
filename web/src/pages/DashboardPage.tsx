@@ -148,17 +148,28 @@ export function DashboardPage() {
       ) : (
         <>
           <FactoryView plan={detail?.plan ?? null} planKey={detail?.id} view="3d" quality={quality} onScene={setScene} />
-          {state.kind === 'error' && <p className="empty-state" role="alert">{state.error.message}</p>}
+          {state.kind === 'error' && (
+            <div className="dash-notice">
+              <p className="dash-note" role="alert">{state.error.message}</p>
+            </div>
+          )}
           {data && !empty && <ChipLayer scene={scene} items={items} projects={data.projects} selectedId={selId} onSelect={onChip} />}
           {data && !empty && <KpiBar kpi={data.kpi} />}
           {drawingId !== null && <LiveBadge conn={live.conn} />}
-          {empty && (
-            <div className="empty-state dash-empty">
-              <strong>이 도면에는 공정 기준정보가 없습니다</strong>
-              {isAdmin && <Link to={`/admin/stations?drawing=${drawingId}`}>기준정보 설정</Link>}
+          {live.conn === 'closed' ? (
+            <div className="dash-notice">
+              <p className="dash-note" role="alert">도면을 찾을 수 없습니다. 다른 도면을 고르세요.</p>
             </div>
+          ) : (
+            empty && (
+              <div className="dash-notice">
+                <div className="dash-note">
+                  <strong>이 도면에는 공정 기준정보가 없습니다</strong>
+                  {isAdmin && <Link to={`/admin/stations?drawing=${drawingId}`}>기준정보 설정</Link>}
+                </div>
+              </div>
+            )
           )}
-          {live.conn === 'closed' && <p className="empty-state" role="alert">도면을 찾을 수 없습니다.</p>}
           {data && !empty && <EventTicker events={data.events} drawerOpen={drawerOpen} onToggle={() => setDrawerOpen((o) => !o)} />}
           {data && !empty && drawerOpen && (
             <LiveDrawer projects={data.projects} materials={data.materials} events={data.events} onClose={() => setDrawerOpen(false)} />

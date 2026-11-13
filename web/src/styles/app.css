@@ -240,5 +240,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 @media (prefers-reduced-motion: reduce) {
   .gauge i.cur, .live-badge.retrying i, .dlabel.flash-a, .dlabel.flash-b { animation: none; }
 }
-.dash-empty { pointer-events: none; }
-.dash-empty a { pointer-events: auto; color: #9cc3ff; font-size: var(--kp-text-14); }
+/* 3D(밝은 바닥) 위 가운데 안내: 바깥은 칩 클릭을 막지 않고, 어두운 판만 클릭을 받음 */
+.dash-notice { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.dash-note { pointer-events: auto; display: grid; justify-items: center; gap: 8px; max-width: min(420px, calc(100% - 32px)); margin: 0; padding: 16px 20px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: color-mix(in srgb, var(--panel) 92%, transparent); box-shadow: 0 12px 32px #0006; color: var(--text); font-size: var(--kp-text-14); text-align: center; }
+.dash-note strong { font-size: var(--kp-text-16); }
+.dash-note a { color: #9cc3ff; }
