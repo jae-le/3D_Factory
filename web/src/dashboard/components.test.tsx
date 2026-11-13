@@ -38,7 +38,7 @@ describe('스테이션 칩', () => {
       expect(within(chip).getByText(t)).toBeInTheDocument()
     const bars = chip.querySelectorAll('.gauge i')
     expect(bars).toHaveLength(12)
-    expect(chip.querySelectorAll('.gauge i.on')).toHaveLength(7)
+    expect(chip.querySelectorAll('.gauge i.on')).toHaveLength(8) // step 8/12 → 막대 8개
     expect(bars[10]).toHaveClass('tg')
     expect(bars[7]).toHaveClass('cur')
   })

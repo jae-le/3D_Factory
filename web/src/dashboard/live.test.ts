@@ -48,13 +48,16 @@ describe('눈금 게이지', () => {
   it('막대 1개 = step 1개, 실적만큼 채움, 목표 막대, 진행 중 막대', () => {
     const c = gaugeCells(12, 60.4, 88)
     expect(c).toHaveLength(12)
-    expect(c.filter((x) => x.on)).toHaveLength(7)
+    expect(c.filter((x) => x.on)).toHaveLength(8) // step 8/12 → 막대 8개
     expect(c.findIndex((x) => x.target)).toBe(10)
     expect(c.findIndex((x) => x.current)).toBe(7)
+    const h = gaugeCells(12, 85, 93) // 칩 '11/12 · 85%' → 11개, 11번째가 진행 중
+    expect(h.filter((x) => x.on)).toHaveLength(11)
+    expect(h.findIndex((x) => x.current)).toBe(10)
   })
   it('끝값', () => {
     expect(gaugeCells(4, 0, 0).findIndex((x) => x.target)).toBe(0)
-    expect(gaugeCells(4, 0, 0).some((x) => x.on)).toBe(false)
+    expect(gaugeCells(4, 0, 0).filter((x) => x.on)).toHaveLength(1) // step 1/4 진행 중
     expect(gaugeCells(4, 100, 130).findIndex((x) => x.target)).toBe(3)
     expect(gaugeCells(4, 100, 130).every((x) => x.on)).toBe(true)
     expect(stepOf(0, 12)).toBe(1)
