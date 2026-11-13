@@ -157,3 +157,86 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .object-info-actions button.danger { margin-left: auto; color: #fca5a5; }
 .edit-tag { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); margin: 0; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: color-mix(in srgb, var(--panel) 92%, transparent); color: var(--text); font-weight: 600; font-size: var(--kp-text-13); }
 .toast.raised { bottom: 64px; }
+
+/* 상황판 (demo 이식): 위 KPI 줄 · 설비 위 칩 · 아래 이벤트 줄 · 오른쪽 서랍 · 연결 표시 */
+:root { --ok: #22c55e; --warn: #f59e0b; --bad: #ef4444; --float: color-mix(in srgb, var(--panel) 94%, transparent); }
+.dash-bar { position: absolute; top: 12px; left: 12px; z-index: 3; display: flex; align-items: center; gap: 4px; padding: 6px 8px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: var(--float); }
+.dash-bar .ttl { padding: 0 12px 0 4px; font-weight: 700; font-size: var(--kp-text-14); }
+.dash-bar .k { display: flex; align-items: baseline; gap: 5px; padding: 3px 9px; color: var(--muted); font-size: var(--kp-text-13); white-space: nowrap; }
+.dash-bar .k b { color: var(--text); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.dash-bar .k.ok b { color: var(--ok); }
+.dash-bar .k.warn b { color: var(--warn); }
+.dash-bar .k.bad b { color: var(--bad); }
+.dash-bar .k.t { margin-left: 6px; color: var(--text); font-variant-numeric: tabular-nums; }
+.live-badge { position: absolute; top: 12px; right: 12px; z-index: 3; display: flex; align-items: center; gap: 6px; margin: 0; padding: 6px 10px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: var(--float); color: var(--text); font-size: var(--kp-text-13); font-weight: 600; }
+.live-badge i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.live-badge.live i { background: var(--ok); }
+.live-badge.retrying { color: var(--warn); }
+.live-badge.retrying i { background: var(--warn); animation: live-blink 1s steps(2, start) infinite; }
+.live-badge.closed i { background: var(--bad); }
+@keyframes live-blink { 50% { opacity: 0.25; } }
+.dash-ticker { position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 3; display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 12px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: var(--float); }
+.dash-ticker .evs { flex: 1; min-width: 0; display: flex; gap: 22px; margin: 0; padding: 0; overflow: hidden; list-style: none; }
+.dash-ticker .ev { display: flex; align-items: center; gap: 6px; white-space: nowrap; font-size: var(--kp-text-13); }
+.dash-ticker .ev.old { color: var(--muted); }
+.dash-ticker .ev small { color: var(--muted); font-size: var(--kp-text-12); font-variant-numeric: tabular-nums; }
+.dash-ticker button { flex: none; display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-xs); background: none; color: var(--text); font-size: var(--kp-text-13); }
+.dash-ticker button.on { border-color: var(--primary); color: #9cc3ff; }
+.dash-drawer { position: absolute; top: 64px; right: 12px; bottom: 64px; z-index: 5; width: 300px; overflow-y: auto; padding: 0 10px 10px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: var(--float); }
+.dash-drawer .dh { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding: 10px 2px; background: var(--panel); font-size: var(--kp-text-14); }
+.dpanel { margin-top: 8px; border: 1px solid var(--line); border-radius: var(--kp-radius-sm); background: #ffffff06; }
+.dpanel h4 { display: flex; align-items: center; gap: 7px; margin: 0; padding: 8px 12px; border-bottom: 1px solid var(--line); font-size: var(--kp-text-13); }
+.dpanel table { width: 100%; border-collapse: collapse; font-size: var(--kp-text-12); }
+.dpanel th { padding: 6px 6px 4px; color: var(--muted); font-weight: 400; }
+.dpanel td { padding: 5px 6px; border-top: 1px solid var(--line); text-align: center; font-variant-numeric: tabular-nums; }
+.dpanel td:first-child { padding-left: 12px; font-weight: 600; text-align: left; }
+.dpanel ul { margin: 0; padding: 4px 0; list-style: none; }
+.dpanel li { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: var(--kp-text-12); }
+.dpanel li span { flex: 1; }
+.dpanel li small { color: var(--muted); font-size: var(--kp-text-12); }
+.dpanel .dempty { margin: 0; padding: 8px 12px; color: var(--muted); font-size: var(--kp-text-12); }
+.st.ok { color: var(--ok); }
+.st.warn { color: var(--warn); }
+.st.bad { color: var(--bad); }
+.chip-layer { position: absolute; inset: 0; z-index: 2; overflow: hidden; pointer-events: none; }
+.dlabel { position: absolute; left: 0; top: 0; display: block; width: max-content; min-width: 196px; max-width: 250px; padding: 7px 9px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--float); color: var(--text); font: inherit; text-align: left; box-shadow: 0 4px 14px #0000004d; pointer-events: auto; cursor: pointer; will-change: transform; transform: translate(-200vw, 0); transition: border-color 0.6s; }
+.dlabel > span { display: flex; }
+.dlabel::after { content: ''; position: absolute; left: calc(50% - var(--dx, 0px)); bottom: calc(-7px - var(--lift, 0px)); margin-left: -6px; border: 6px solid transparent; border-bottom: 0; border-top-color: var(--line-strong); }
+.dlabel::before { content: ''; position: absolute; left: calc(50% - var(--dx, 0px)); top: 100%; width: 2px; margin-left: -1px; height: var(--lift, 0px); background: var(--line-strong); }
+.dlabel:hover { border-color: #4b5565; z-index: 2; }
+.dlabel.sel { border-color: var(--primary); z-index: 3; }
+.dlabel.sel::after { border-top-color: var(--primary); }
+.dlabel.sel::before { background: var(--primary); }
+.dlabel.flash-a { animation: chip-flash-a 0.8s ease-out; }
+.dlabel.flash-b { animation: chip-flash-b 0.8s ease-out; }
+@keyframes chip-flash-a { from { box-shadow: 0 0 0 0 #ffffffb0, 0 4px 14px #0000004d; } to { box-shadow: 0 0 0 12px #ffffff00, 0 4px 14px #0000004d; } }
+@keyframes chip-flash-b { from { box-shadow: 0 0 0 0 #ffffffb0, 0 4px 14px #0000004d; } to { box-shadow: 0 0 0 12px #ffffff00, 0 4px 14px #0000004d; } }
+.dlabel .ch { align-items: center; gap: 6px; }
+.dlabel .ch b { flex: 1; font-size: var(--kp-text-14); white-space: nowrap; }
+.dno { flex: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 5px; color: #fff; font-weight: 700; font-size: var(--kp-text-12); transition: background-color 0.6s; }
+.dno.ok { background: var(--ok); }
+.dno.warn { background: var(--warn); }
+.dno.bad { background: var(--bad); }
+.pill { flex: none; padding: 1px 7px; border-radius: 9px; font-size: var(--kp-text-12); font-weight: 600; transition: color 0.6s, background-color 0.6s; }
+.pill.ok { color: var(--ok); background: #22c55e26; }
+.pill.warn { color: var(--warn); background: #f59e0b26; }
+.pill.bad { color: #fff; background: var(--bad); }
+.dlabel .pjt { display: block; margin-top: 3px; color: #93c5fd; font-size: var(--kp-text-13); font-weight: 600; }
+.dlabel .pjt span { color: var(--muted); font-weight: 400; }
+.dlabel .job { gap: 6px; margin-top: 5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--kp-text-13); }
+.dlabel .job .stp { color: var(--muted); font-variant-numeric: tabular-nums; }
+.dlabel .cb { align-items: flex-end; gap: 10px; margin-top: 8px; }
+.gauge { display: flex; align-items: flex-end; gap: 3px; height: 22px; }
+.gauge i { width: 5px; height: 16px; border-radius: 1.5px; background: #343a45; transition: background-color 0.6s; }
+.gauge i.tg { height: 22px; background: #c7ccd4; }
+.gauge.ok i.on { background: var(--ok); }
+.gauge.warn i.on { background: var(--warn); }
+.gauge.bad i.on { background: var(--bad); }
+.gauge i.cur { animation: gauge-pulse 1.2s ease-in-out infinite; }
+@keyframes gauge-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+.dlabel .pct { margin-left: auto; font-size: 17px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.dlabel .nums { gap: 8px; margin-top: 4px; color: var(--muted); font-size: var(--kp-text-12); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.dlabel .nums .st { margin-left: auto; font-weight: 600; }
+@media (prefers-reduced-motion: reduce) {
+  .gauge i.cur, .live-badge.retrying i, .dlabel.flash-a, .dlabel.flash-b { animation: none; }
+}
