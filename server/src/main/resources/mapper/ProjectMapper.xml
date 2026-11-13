@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.station.ProjectMapper">
+
+    <resultMap id="view" type="com.kopens.factory3d.station.ProjectView">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="name" javaType="String"/>
+            <arg column="done" javaType="_int"/>
+            <arg column="total" javaType="_int"/>
+            <arg column="period" javaType="String"/>
+            <arg column="state" javaType="String"/>
+            <arg column="sort_order" javaType="_int"/>
+        </constructor>
+    </resultMap>
+
+    <select id="findByDrawing" resultMap="view">
+        select id, name, done, total, period, state, sort_order from project where drawing_id = #{drawingId} order by sort_order, id
+    </select>
+    <select id="findById" resultMap="view">select id, name, done, total, period, state, sort_order from project where id = #{id}</select>
+    <select id="drawingOf" resultType="java.lang.Long">select drawing_id from project where id = #{id}</select>
+    <select id="countByDrawing" resultType="_int">select count(*) from project where drawing_id = #{drawingId}</select>
+    <select id="existsByName" resultType="_boolean">
+        select exists(select 1 from project where drawing_id = #{drawingId} and name = #{name}
+            <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>)
+    </select>
+    <select id="nextOrder" resultType="_int">select coalesce(max(sort_order), 0) + 1 from project where drawing_id = #{drawingId}</select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="row.id" keyColumn="id">
+        insert into project (drawing_id, name, done, total, period, state, sort_order)
+        values (#{drawingId}, #{row.name}, #{row.done}, #{row.total}, #{row.period,jdbcType=VARCHAR}, #{row.state}, #{row.sortOrder})
+    </insert>
+
+    <update id="update">
+        update project set name = #{row.name}, done = #{row.done}, total = #{row.total}, period = #{row.period,jdbcType=VARCHAR},
+            state = #{row.state}
+        where id = #{id}
+    </update>
+
+    <update id="setDone">update project set done = #{done} where id = #{id}</update>
+
+    <delete id="delete">delete from project where id = #{id}</delete>
+</mapper>

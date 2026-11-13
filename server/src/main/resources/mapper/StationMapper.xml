@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.station.StationMapper">
+
+    <resultMap id="view" type="com.kopens.factory3d.station.StationView">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="sort_order" javaType="_int"/>
+            <arg column="name" javaType="String"/>
+            <arg column="placement_name" javaType="String"/>
+            <arg column="steps" javaType="java.util.List" typeHandler="com.kopens.factory3d.model.TextArrayHandler"/>
+            <arg column="takt_sec" javaType="_int"/>
+            <arg column="warn_pp" javaType="_int"/>
+            <arg column="delay_pp" javaType="_int"/>
+            <arg column="project_id" javaType="java.lang.Long"/>
+            <arg column="counts_project" javaType="_boolean"/>
+            <arg column="materials" javaType="java.util.List" typeHandler="com.kopens.factory3d.model.TextArrayHandler"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="cols">id, sort_order, name, placement_name, steps, takt_sec, warn_pp, delay_pp, project_id, counts_project, materials</sql>
+
+    <select id="findByDrawing" resultMap="view">
+        select <include refid="cols"/> from station where drawing_id = #{drawingId} order by sort_order, id
+    </select>
+    <select id="findById" resultMap="view">select <include refid="cols"/> from station where id = #{id}</select>
+    <select id="drawingOf" resultType="java.lang.Long">select drawing_id from station where id = #{id}</select>
+    <select id="countByDrawing" resultType="_int">select count(*) from station where drawing_id = #{drawingId}</select>
+    <select id="existsByName" resultType="_boolean">
+        select exists(select 1 from station where drawing_id = #{drawingId} and name = #{name}
+            <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>)
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="row.id" keyColumn="id">
+        insert into station (drawing_id, sort_order, name, placement_name, steps, takt_sec, warn_pp, delay_pp, project_id,
+                             counts_project, materials)
+        values (#{drawingId}, #{row.no}, #{row.name}, #{row.placementName,jdbcType=VARCHAR},
+                #{row.steps,typeHandler=org.apache.ibatis.type.ArrayTypeHandler}, #{row.taktSec}, #{row.warnPp}, #{row.delayPp},
+                #{row.projectId,jdbcType=BIGINT}, #{row.countsProject},
+                #{row.materials,typeHandler=org.apache.ibatis.type.ArrayTypeHandler})
+    </insert>
+
+    <update id="update">
+        update station set name = #{row.name}, placement_name = #{row.placementName,jdbcType=VARCHAR},
+            steps = #{row.steps,typeHandler=org.apache.ibatis.type.ArrayTypeHandler}, takt_sec = #{row.taktSec},
+            warn_pp = #{row.warnPp}, delay_pp = #{row.delayPp}, project_id = #{row.projectId,jdbcType=BIGINT},
+            counts_project = #{row.countsProject},
+            materials = #{row.materials,typeHandler=org.apache.ibatis.type.ArrayTypeHandler}
+        where id = #{id}
+    </update>
+
+    <update id="setOrder">update station set sort_order = #{no} where id = #{id}</update>
+
+    <delete id="delete">delete from station where id = #{id}</delete>
+</mapper>
