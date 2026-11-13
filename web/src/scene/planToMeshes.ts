@@ -1,19 +1,17 @@
 import * as THREE from 'three'
 import type { Plan, Pt, WallSeg } from '../drawing/plan/types'
 import { planToLocal } from './coords'
-import { textMesh, zoneLabel, type ZoneLabel } from './labels'
+import { textMesh } from './labels'
 import type { Materials } from './materials'
 
 export interface PlanMeshes {
   group: THREE.Group
   lineMats: THREE.LineBasicMaterial[]
   labelMats: THREE.MeshBasicMaterial[]
-  /** 구역 이름 표 (보기 모드에 따라 FactoryScene 이 글자 텍스처를 바꿈) */
-  zoneLabels: ZoneLabel[]
   verts: Pt[]
 }
 
-/** 바닥 장식 높이 (z-fighting 방지): 구역 면 < 구역 테두리 < 선 < 글자 */
+/** 바닥 장식 높이 (z-fighting 방지): 구역 테두리 < 선 < 글자 */
 export const DECAL_Y = { zoneEdge: 0.025, line: 0.03, label: 0.04 }
 const ZONE_EDGE = 0x5b6270
 
@@ -71,8 +69,7 @@ export function planToMeshes(plan: Plan, mats: Materials, opts: { labels: boolea
       }
     }
 
-  // 구역: 바닥 테두리 + 이름 표 (demo 처럼 면 색 없음 — CAD 선 색은 의미가 없어 중립 회색)
-  const zoneLabels: ZoneLabel[] = []
+  // 구역: 바닥 테두리만 (demo 처럼 면 색·이름 표 없음 — 이름·상태는 상황판에서)
   for (const z of plan.zones) {
     const edge = new THREE.LineLoop(
       new THREE.BufferGeometry().setFromPoints(z.poly.map(([x, y]) => new THREE.Vector3(...xz(L(x, y))))),
@@ -80,15 +77,6 @@ export function planToMeshes(plan: Plan, mats: Materials, opts: { labels: boolea
     )
     edge.userData = { kind: 'zoneEdge', id: z.id }
     zones.add(edge)
-    const lab = opts.labels && z.name.trim() ? zoneLabel(z.name.trim()) : null
-    if (lab) {
-      const [cx, cy] = centroid(z.poly)
-      const [lx, lz] = L(cx, cy)
-      lab.sprite.position.set(lx, 1.5, lz)
-      lab.sprite.userData = { kind: 'zoneLabel', id: z.id }
-      zones.add(lab.sprite)
-      zoneLabels.push(lab)
-    }
   }
 
   // 외벽·가벽: 선분마다 상자. 높이 > 4m 는 골강판 + 걸레받이(1.2m), 낮은 벽은 석고 (demo rebuildSolids 의 wall 분기)
@@ -146,27 +134,10 @@ export function planToMeshes(plan: Plan, mats: Materials, opts: { labels: boolea
       o.receiveShadow = true
     }
   })
-  return { group, lineMats, labelMats, zoneLabels, verts }
+  return { group, lineMats, labelMats, verts }
 }
 
 const xz = ([x, z]: [number, number]): [number, number, number] => [x, DECAL_Y.zoneEdge, z]
-
-/** 다각형 무게중심 (넓이 0 이면 꼭짓점 평균) */
-export function centroid(poly: Pt[]): Pt {
-  let a = 0, cx = 0, cy = 0
-  for (let i = 0; i < poly.length; i++) {
-    const [x0, y0] = poly[i], [x1, y1] = poly[(i + 1) % poly.length]
-    const k = x0 * y1 - x1 * y0
-    a += k
-    cx += (x0 + x1) * k
-    cy += (y0 + y1) * k
-  }
-  if (Math.abs(a) < 1e-9) {
-    const n = poly.length || 1
-    return [poly.reduce((s, p) => s + p[0], 0) / n, poly.reduce((s, p) => s + p[1], 0) / n]
-  }
-  return [cx / (3 * a), cy / (3 * a)]
-}
 
 function named(name: string) {
   const g = new THREE.Group()

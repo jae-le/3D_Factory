@@ -180,10 +180,6 @@ export class FactoryScene implements PickSource, ObjectHost {
     if (this.meshes) {
       this.root.remove(this.meshes.group)
       disposeGroup(this.meshes.group)
-      for (const z of this.meshes.zoneLabels) {
-        z.dark.dispose()
-        z.light.dispose()
-      }
       this.meshes = null
     }
     this.plan = plan
@@ -381,7 +377,6 @@ export class FactoryScene implements PickSource, ObjectHost {
         m.color.setHex(is3d ? 0x2c3138 : 0xffffff)
         m.opacity = is3d ? 0.6 : 1
       }
-      for (const z of this.meshes.zoneLabels) z.sprite.material.map = is3d ? z.dark : z.light
     }
     this.objectLayer.setDark(is3d)
     this.hemi.intensity = is3d ? 0.3 : 0.9
