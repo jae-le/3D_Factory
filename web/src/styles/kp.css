@@ -85,6 +85,7 @@
 
 /* ===== 관리자 화면 틀: 어두운 레일 + 흰 본문 ===== */
 .kp-shell { height: 100%; display: grid; grid-template-columns: var(--rail-w) minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: 'rail main'; background: var(--kp-bg); font-family: var(--kp-font); color: var(--kp-text); }
+.kp-shell { --sb-thumb: #11111126; --sb-thumb-hover: #11111152; }
 .kp-shell-main { grid-area: main; display: flex; flex-direction: column; min-height: 0; }
 .kp-header { flex: none; height: 64px; display: flex; align-items: center; padding: 0 var(--kp-sp-32); background: var(--kp-white); border-bottom: 1px solid var(--kp-border); }
 .kp-header .spacer { flex: 1; }

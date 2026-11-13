@@ -72,7 +72,6 @@ export function FactoryPage() {
   const [placing, setPlacing] = useState<ModelInfo | null>(null)
   const [dragPos, setDragPos] = useState<DragPos | null>(null)
   const [toolOn, setToolOn] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(true)
   const pendingNames = useRef(new Set<string>()) // 놓기 요청 중인 이름 — 빠른 연속 놓기에도 이름이 겹치지 않게
   // 도면이 바뀌면 선택·편집·배치 모드를 끝냄 (렌더 중 조정)
   const [objDrawing, setObjDrawing] = useState(detail?.id ?? null)
@@ -275,8 +274,20 @@ export function FactoryPage() {
       </button>
     </>
   )
+  const side = detail && drawings.kind === 'ok' && list.length > 0 && (
+    <ObjectPanel
+      models={modelList}
+      placements={rows}
+      canEdit={canEdit}
+      selectedId={selected?.id ?? null}
+      placingModelId={placing?.id ?? null}
+      onPickModel={pickModel}
+      onSelect={selectFromList}
+      onAddModel={() => setAddingModel(true)}
+    />
+  )
   return (
-    <AppShell active="factory" head={head}>
+    <AppShell active="factory" head={head} side={side}>
       {drawings.kind === 'loading' ? (
         <p className="empty-state" role="status">도면 목록 불러오는 중…</p>
       ) : list.length === 0 ? (
@@ -289,19 +300,6 @@ export function FactoryPage() {
           <FactoryView plan={detail?.plan ?? null} planKey={detail?.id} view={pref.mode} quality={pref.quality} onScene={setScene} />
           {state.kind === 'error' && <p className="empty-state" role="alert">{state.error.message}</p>}
           {detail && <DrawingTools scene={scene} plan={detail.plan} canEdit={canEdit} onSave={onSave} onToolChange={onToolChange} />}
-          {detail && (
-            <ObjectPanel
-              models={modelList}
-              placements={rows}
-              canEdit={canEdit}
-              selectedId={selected?.id ?? null}
-              placingModelId={placing?.id ?? null}
-              onPickModel={pickModel}
-              onSelect={selectFromList}
-              onAddModel={() => setAddingModel(true)}
-              onOpenChange={setPanelOpen}
-            />
-          )}
           {objectInfo}
           {tag && <EditTag text={tag} />}
           {toast && <p className={tag ? 'toast raised' : 'toast'} role="status">{toast}</p>}
@@ -310,7 +308,6 @@ export function FactoryPage() {
               name={detail.name}
               plan={detail.plan}
               calibrated={Math.abs(detail.plan.scale - UNIT_SCALE[detail.plan.unit]) > 1e-9}
-              right={panelOpen}
             />
           )}
         </>
