@@ -258,6 +258,18 @@ export class ObjectLayer {
     return e.group.getWorldPosition(new THREE.Vector3())
   }
 
+  /** 배치 메쉬 bbox 최고 높이(월드 y) — 상황판 칩 기준점. 이름표 스프라이트는 빼고 메쉬만 */
+  top(id: number): number | null {
+    const e = this.items.get(id)
+    if (!e) return null
+    e.group.updateWorldMatrix(true, true)
+    const b = new THREE.Box3()
+    e.body.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) b.expandByObject(o)
+    })
+    return b.isEmpty() ? null : b.max.y
+  }
+
   /** 이름표: 3D = 어두운 글자, 도면 보기 = 흰 글자 */
   setDark(dark: boolean): void {
     this.dark = dark

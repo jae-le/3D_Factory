@@ -48,6 +48,15 @@ export class Navigator {
     }
   }
 
+  /** 정한 시점으로 0.6초 이동 (상황판 전체 보기) */
+  flyTo(target: THREE.Vector3, position: THREE.Vector3, dur = 600): void {
+    this.camAnim = {
+      t0: performance.now(), dur,
+      fT: this.controls.target.clone(), tT: target.clone(),
+      fP: this.camera.position.clone(), tP: position.clone(),
+    }
+  }
+
   /** 매 프레임: 포커스 애니메이션 + 키보드 이동 */
   update(dt: number): void {
     this.stepCamAnim()

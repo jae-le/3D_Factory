@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Plan } from '../drawing/plan/types'
-import { FactoryScene, type ObjectHost, type PickSource, type Quality, type ViewMode } from './FactoryScene'
+import { FactoryScene, type Quality, type SceneHost, type ViewMode } from './FactoryScene'
 
 interface Props {
   plan: Plan | null
@@ -8,7 +8,7 @@ interface Props {
   planKey?: number
   view: ViewMode
   quality: Quality
-  onScene?: (s: (PickSource & ObjectHost) | null) => void
+  onScene?: (s: SceneHost | null) => void
 }
 
 /** 3D 화면 껍데기: FactoryScene 을 만들고 plan·보기·품질을 넘김 */

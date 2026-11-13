@@ -56,4 +56,13 @@ describe('ObjectLayer (형상만)', () => {
     layer.setEditing(null)
     expect(layer.editStats()).toBeNull()
   })
+
+  it('칩 기준점: 메쉬 최고 높이', () => {
+    const root = new THREE.Group()
+    const layer = new ObjectLayer(root, box)
+    layer.setBounds({ w: 10, h: 10 })
+    layer.setObjects([obj(1)]) // 모델 없는 임시 상자, 높이 sizeZ = 3
+    expect(layer.top(1)).toBeCloseTo(3)
+    expect(layer.top(99)).toBeNull()
+  })
 })

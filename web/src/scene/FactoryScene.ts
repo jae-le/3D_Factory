@@ -9,11 +9,13 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import type { Plan, Pt } from '../drawing/plan/types'
 import { cellSize, rectOf, snapToCells } from '../objects/grid'
 import { localToPlan, planToLocal } from './coords'
+import { overviewPose, toScreen, type ScreenPoint } from './dashView'
 import { createMaterials, type Materials } from './materials'
 import { disposeCache, loadModel } from './modelCache'
 import { Navigator } from './navigation'
 import { ObjectLayer, type GhostSpec, type ObjectEvents, type SceneObject } from './objectLayer'
 import { planToMeshes, type PlanMeshes } from './planToMeshes'
+import { RingLayer, type RingSpec } from './ringLayer'
 import { createTextures, type Textures } from './textures'
 
 export type ViewMode = '3d' | 'plan'
@@ -32,6 +34,17 @@ export interface ObjectHost {
   setObjectEvents(e: ObjectEvents | null): void
   focusObject(id: number): void
 }
+/** plan 좌표(m) + 높이(m) → 화면 px (상황판 칩) */
+export type ScreenProject = (x: number, y: number, h: number) => ScreenPoint
+/** 상황판: 바닥 링 · 매 프레임 화면 좌표 · 전체 보기 · 칩 높이 · 보기 전용 */
+export interface DashHost {
+  setRings(rings: RingSpec[]): void
+  onFrame(cb: ((project: ScreenProject) => void) | null): void
+  frameOverview(): void
+  objectTop(id: number): number | null
+  setInteractive(on: boolean): void
+}
+export type SceneHost = PickSource & ObjectHost & DashHost
 
 const SNAP_PX = 12
 const MARK_COLOR = 0xff5a1f // 측정 점·선: 밝은 바닥·어두운 도면 양쪽에서 잘 보이는 주황
@@ -58,7 +71,7 @@ function disposeGroup(g: THREE.Object3D) {
 }
 
 /** 3D 공장 화면. React 는 setPlan·setView·setQuality·도구 콜백만 부른다 */
-export class FactoryScene implements PickSource, ObjectHost {
+export class FactoryScene implements PickSource, ObjectHost, DashHost {
   private container: HTMLElement
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
@@ -79,6 +92,11 @@ export class FactoryScene implements PickSource, ObjectHost {
   private overlay = new THREE.Group() // 측정 점·선 (root 아래)
   private objects = new THREE.Group() // 배치 객체 (root 아래)
   private objectLayer: ObjectLayer
+  private ringGroup = new THREE.Group() // 상황판 바닥 링 (root 아래)
+  private rings: RingLayer
+  private frameCb: ((project: ScreenProject) => void) | null = null
+  private interactive = true // false = 상황판 (선택·끌기·배치 없음)
+  private projV = new THREE.Vector3()
   private objEvents: ObjectEvents | null = null
   private editingId: number | null = null
   // 편집 끌기: 잡은 점과 중심의 차이(plan m), 마지막 자리
@@ -149,8 +167,9 @@ export class FactoryScene implements PickSource, ObjectHost {
     this.ground.position.y = -0.01
     this.ground.receiveShadow = true
     this.scene.add(this.ground, this.root)
-    this.root.add(this.overlay, this.objects)
+    this.root.add(this.overlay, this.objects, this.ringGroup)
     this.objectLayer = new ObjectLayer(this.objects, loadModel)
+    this.rings = new RingLayer(this.ringGroup)
 
     this.nav = new Navigator(this.camera, controls, renderer.domElement)
     const dom = renderer.domElement
@@ -186,9 +205,11 @@ export class FactoryScene implements PickSource, ObjectHost {
     if (!plan) {
       this.clearOverlay()
       this.objectLayer.setObjects([])
+      this.rings.setRings([])
       return
     }
     this.objectLayer.setBounds(plan.bounds)
+    this.rings.setBounds(plan.bounds)
     this.meshes = planToMeshes(plan, this.mats, { labels: true })
     this.root.add(this.meshes.group)
     this.root.scale.set(plan.flip, 1, 1)
@@ -273,6 +294,41 @@ export class FactoryScene implements PickSource, ObjectHost {
     if (o && pos) this.nav.focusOn(pos, Math.max(o.sizeX, o.sizeY, 6))
   }
 
+  setRings(rings: RingSpec[]): void {
+    this.rings.setRings(rings)
+  }
+
+  onFrame(cb: ((project: ScreenProject) => void) | null): void {
+    this.frameCb = cb
+  }
+
+  /** demo frameDash: 벽(없으면 도면 전체) 범위가 꽉 차게, 북쪽 위로 약 70° 내려다봄 (0.6초) */
+  frameOverview(): void {
+    const m = this.meshes
+    if (!m) return
+    this.root.updateMatrixWorld(true)
+    const walls: THREE.Object3D[] = []
+    m.group.traverse((o) => {
+      if (o.userData.kind === 'wall') walls.push(o)
+    })
+    const box = new THREE.Box3()
+    for (const o of walls.length ? walls : [m.group]) box.expandByObject(o)
+    if (box.isEmpty()) return
+    const { target, position } = overviewPose(box, this.camera.fov, this.camera.aspect)
+    this.nav.flyTo(target, position)
+  }
+
+  objectTop(id: number): number | null {
+    return this.objectLayer.top(id)
+  }
+
+  setInteractive(on: boolean): void {
+    this.interactive = on
+    if (on) return
+    this.endDrag()
+    this.objectLayer.setGhost(null)
+  }
+
   dispose(): void {
     this.renderer.setAnimationLoop(null)
     this.resizeObs.disconnect()
@@ -288,8 +344,10 @@ export class FactoryScene implements PickSource, ObjectHost {
     dom.removeEventListener('dblclick', this.onDblClick)
     this.controls.dispose()
     this.objEvents = null
+    this.frameCb = null
     this.drag = null
     this.setPlan(null)
+    this.rings.dispose()
     this.objectLayer.dispose()
     disposeCache()
     this.markMat.dispose()
@@ -315,8 +373,18 @@ export class FactoryScene implements PickSource, ObjectHost {
     const dt = Math.min(this.timer.getDelta(), 0.1)
     this.nav.update(dt)
     this.controls.update()
+    this.rings.update()
     if (this.mode === '3d' && this.quality === 'high') this.composer.render()
     else this.renderer.render(this.scene, this.camera)
+    this.frameCb?.(this.screenOf)
+  }
+
+  /** plan 좌표 + 높이 → 화면 px (렌더 직후라 행렬이 최신) */
+  private screenOf: ScreenProject = (x, y, h) => {
+    const plan = this.plan, w = this.container.clientWidth, hh = this.container.clientHeight
+    if (!plan || !w || !hh) return { sx: 0, sy: 0, visible: false }
+    const [lx, lz] = planToLocal(x, y, plan.bounds)
+    return toScreen(this.projV.set(lx, h, lz).applyMatrix4(this.root.matrixWorld).project(this.camera), w, hh)
   }
 
   private resize() {
@@ -477,7 +545,7 @@ export class FactoryScene implements PickSource, ObjectHost {
     this.rDownAt = ev.button === 2 ? { x: ev.clientX, y: ev.clientY } : null
     this.skipClick = false
     const id = this.editingId
-    if (ev.button !== 0 || id == null || this.drag || this.onPick || this.objectLayer.hasGhost()) return
+    if (!this.interactive || ev.button !== 0 || id == null || this.drag || this.onPick || this.objectLayer.hasGhost()) return
     const p = this.groundPlan(ev) // this.ray 도 맞춰짐
     const o = this.objectLayer.object(id)
     if (!p || !o || this.objectLayer.pick(this.ray) !== id) return
@@ -554,6 +622,7 @@ export class FactoryScene implements PickSource, ObjectHost {
       if (p) this.onPick(p)
       return
     }
+    if (!this.interactive) return // 상황판: 선택 없음 (칩으로 고름)
     const events = this.objEvents
     if (this.objectLayer.hasGhost()) {
       const p = this.groundPlan(ev)
