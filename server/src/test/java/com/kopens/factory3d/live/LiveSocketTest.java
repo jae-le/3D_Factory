@@ -99,7 +99,7 @@ class LiveSocketTest extends IntegrationTest {
         var b = HttpClient.newHttpClient().newWebSocketBuilder();
         if (cookie != null) b.header("Cookie", cookie);
         if (origin != null) b.header("Origin", origin);
-        return b.buildAsync(URI.create("ws://localhost:" + port + "/ws/live?drawing=" + drawingParam), c);
+        return b.buildAsync(URI.create("ws://localhost:" + port + "/ws/live" + (drawingParam == null ? "" : "?drawing=" + drawingParam)), c);
     }
 
     /** 핸드셰이크가 거부된 HTTP 상태 (JDK 는 WebSocketHandshakeException 안에 응답을 담음) */
@@ -131,7 +131,7 @@ class LiveSocketTest extends IntegrationTest {
     }
 
     @Test
-    void 없는_도면이나_숫자가_아니면_4404로_닫음() throws Exception {
+    void 없는_도면이나_숫자가_아니거나_빠지면_4404로_닫음() throws Exception {
         String cookie = login();
         var c1 = new Collector();
         open(c1, cookie, null, "999999999").get(5, SECONDS);
@@ -139,6 +139,9 @@ class LiveSocketTest extends IntegrationTest {
         var c2 = new Collector();
         open(c2, cookie, null, "abc").get(5, SECONDS);
         assertThat(c2.closed.get(5, SECONDS)).isEqualTo(4404);
+        var c3 = new Collector();
+        open(c3, cookie, null, null).get(5, SECONDS); // drawing 없음
+        assertThat(c3.closed.get(5, SECONDS)).isEqualTo(4404);
     }
 
     @Test
