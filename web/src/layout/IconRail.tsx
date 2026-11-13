@@ -20,14 +20,14 @@ interface Item {
 const MENU: Item[] = [
   { key: 'factory', label: '3D 공장', icon: Box, to: '/' },
   { key: 'objects', label: '객체', icon: Boxes, to: '/' },
-  { key: 'dashboard', label: '상황판', icon: LayoutDashboard },
+  { key: 'dashboard', label: '상황판', icon: LayoutDashboard, to: '/dashboard' },
   { key: 'run', label: '실행', icon: Play },
   { key: 'chat', label: 'AI 챗봇', icon: Bot },
 ]
 const ADMIN: Item = { key: 'admin', label: '관리자', icon: Settings, to: '/admin' }
 export const OBJECTS_PANEL_KEY = 'f3d:objects-panel'
 
-/** 맨 왼쪽 메뉴(아이콘 + 이름). 상황판·실행·AI 챗봇은 다음 단계에서 열림, 관리자는 관리자에게만 */
+/** 맨 왼쪽 메뉴(아이콘 + 이름). 실행·AI 챗봇은 다음 단계에서 열림, 관리자는 관리자에게만 */
 export function IconRail({ active, panel }: { active: RailKey; panel?: RailPanel }) {
   const navigate = useNavigate()
   const { user } = useAuth()

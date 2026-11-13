@@ -2,6 +2,7 @@ import { Navigate, type RouteObject } from 'react-router'
 import { RequireAuth } from './auth/RequireAuth'
 import { AdminLayout } from './pages/admin/AdminLayout'
 import { AuditPage } from './pages/admin/AuditPage'
+import { DashboardPage } from './pages/DashboardPage'
 import { DrawingsPage } from './pages/admin/DrawingsPage'
 import { LoginHistoryPage } from './pages/admin/LoginHistoryPage'
 import { ModelsPage } from './pages/admin/ModelsPage'
@@ -16,6 +17,7 @@ export const routes: RouteObject[] = [
   { path: '/login', element: <LoginPage /> },
   { path: '/password', element: <RequireAuth><PasswordPage /></RequireAuth> },
   { path: '/', element: <RequireAuth><FactoryPage /></RequireAuth>, errorElement: <ErrorPage code="500" /> },
+  { path: '/dashboard', element: <RequireAuth><DashboardPage /></RequireAuth>, errorElement: <ErrorPage code="500" /> },
   {
     path: '/admin',
     element: <RequireAuth role="ADMIN"><AdminLayout /></RequireAuth>,

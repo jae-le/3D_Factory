@@ -90,7 +90,7 @@ describe('메인 레이아웃', () => {
     show(base)
     expect(await screen.findByRole('button', { name: /도면 추가/ })).toBeEnabled()
     expect(screen.queryByRole('button', { name: '관리자' })).toBeNull()
-    expect(screen.getByRole('button', { name: /상황판/ })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '상황판' })).toBeEnabled()
   })
 
   it('조회 권한은 도면 추가 버튼 없음', async () => {
