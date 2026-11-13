@@ -8,7 +8,7 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
 import type { Plan, Pt } from '../drawing/plan/types'
 import { cellSize, rectOf, snapToCells } from '../objects/grid'
-import { localToPlan, planToLocal } from './coords'
+import { localToPlan, planToLocal, worldToPlan } from './coords'
 import { overviewPose, toScreen, type ScreenPoint } from './dashView'
 import { createMaterials, type Materials } from './materials'
 import { disposeCache, loadModel } from './modelCache'
@@ -17,6 +17,7 @@ import { ObjectLayer, type GhostSpec, type ObjectEvents, type SceneObject } from
 import { planToMeshes, type PlanMeshes } from './planToMeshes'
 import { RingLayer, type RingSpec } from './ringLayer'
 import { createTextures, type Textures } from './textures'
+import { applyPose, ghostWalls, walkFog, WALK_FOV, WALK_NEAR, worldOf, type CameraDriver } from './walkLook'
 
 export type ViewMode = '3d' | 'plan'
 export type Quality = 'high' | 'low'
@@ -44,7 +45,15 @@ export interface DashHost {
   objectTop(id: number): number | null
   setInteractive(on: boolean): void
 }
-export type SceneHost = PickSource & ObjectHost & DashHost
+/** 체험 공간: 드라이버가 카메라를 직접 움직임 (plan 좌표 자세 → 월드는 장면이 바꿈) */
+export interface WalkHost {
+  setCameraDriver(d: CameraDriver | null): void
+  setGhostWalls(on: boolean): void
+  pickPlacement(sx: number, sy: number, far: number): number | null
+  worldOfPlan(x: number, y: number, h: number): THREE.Vector3
+  planOfWorld(v: THREE.Vector3): { x: number; y: number }
+}
+export type SceneHost = PickSource & ObjectHost & DashHost & WalkHost
 
 const SNAP_PX = 12
 const MARK_COLOR = 0xff5a1f // 측정 점·선: 밝은 바닥·어두운 도면 양쪽에서 잘 보이는 주황
@@ -71,7 +80,7 @@ function disposeGroup(g: THREE.Object3D) {
 }
 
 /** 3D 공장 화면. React 는 setPlan·setView·setQuality·도구 콜백만 부른다 */
-export class FactoryScene implements PickSource, ObjectHost, DashHost {
+export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost {
   private container: HTMLElement
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
@@ -96,6 +105,9 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
   private rings: RingLayer
   private frameCb: ((project: ScreenProject) => void) | null = null
   private interactive = true // false = 상황판 (선택·끌기·배치 없음)
+  private driver: CameraDriver | null = null // 체험 공간 걷기·조감 (있으면 OrbitControls·Navigator 멈춤)
+  private ghost = false // 조감 뷰: 벽 반투명
+  private orbit: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null // 걷기 전 궤도 시점
   private projV = new THREE.Vector3()
   private objEvents: ObjectEvents | null = null
   private editingId: number | null = null
@@ -212,6 +224,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
     this.rings.setBounds(plan.bounds)
     this.meshes = planToMeshes(plan, this.mats, { labels: true })
     this.root.add(this.meshes.group)
+    if (this.ghost) ghostWalls(this.mats, this.meshes.group, true)
     this.root.scale.set(plan.flip, 1, 1)
     this.root.rotation.y = (plan.rotQ * Math.PI) / 2
     this.root.updateMatrixWorld(true)
@@ -329,6 +342,53 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
     this.objectLayer.setGhost(null)
   }
 
+  setCameraDriver(d: CameraDriver | null): void {
+    const was = this.driver
+    this.driver = d
+    if (d && !was) {
+      this.orbit = { pos: this.camera.position.clone(), target: this.controls.target.clone() }
+      this.controls.enabled = false
+      this.nav.cancel()
+      this.endDrag()
+    } else if (!d && was) {
+      if (this.orbit) {
+        this.camera.position.copy(this.orbit.pos)
+        this.controls.target.copy(this.orbit.target)
+      }
+      this.orbit = null
+      this.controls.enabled = true
+      this.controls.update()
+    }
+    this.fitCamera()
+    this.applyLook()
+  }
+
+  setGhostWalls(on: boolean): void {
+    this.ghost = on
+    ghostWalls(this.mats, this.meshes?.group ?? null, on)
+    this.applyLook()
+  }
+
+  /** 화면 좌표(clientX/Y)의 배치 id — far(m) 안, 없으면 null (벽 뒤도 고름 — 참고 파일과 같음) */
+  pickPlacement(sx: number, sy: number, far: number): number | null {
+    if (!this.plan || !this.rayAt({ clientX: sx, clientY: sy })) return null
+    this.root.updateMatrixWorld(true)
+    this.ray.far = far
+    const id = this.objectLayer.pick(this.ray)
+    this.ray.far = Infinity
+    return id
+  }
+
+  worldOfPlan(x: number, y: number, h: number): THREE.Vector3 {
+    return this.plan ? worldOf({ x, y, h }, this.plan) : new THREE.Vector3()
+  }
+
+  planOfWorld(v: THREE.Vector3): { x: number; y: number } {
+    if (!this.plan) return { x: 0, y: 0 }
+    const [x, y] = worldToPlan(v.x, v.z, this.plan)
+    return { x, y }
+  }
+
   dispose(): void {
     this.renderer.setAnimationLoop(null)
     this.resizeObs.disconnect()
@@ -345,6 +405,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
     this.controls.dispose()
     this.objEvents = null
     this.frameCb = null
+    this.driver = null
     this.drag = null
     this.setPlan(null)
     this.rings.dispose()
@@ -371,8 +432,12 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
   private tick = () => {
     this.timer.update()
     const dt = Math.min(this.timer.getDelta(), 0.1)
-    this.nav.update(dt)
-    this.controls.update()
+    const drv = this.driver
+    if (drv && this.plan) applyPose(this.camera, drv.update(dt), this.plan)
+    else if (!drv) {
+      this.nav.update(dt)
+      this.controls.update()
+    }
     this.rings.update()
     if (this.mode === '3d' && this.quality === 'high') this.composer.render()
     else this.renderer.render(this.scene, this.camera)
@@ -412,15 +477,30 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
 
   /** 새 도면: 범위에 맞춰 near/far 와 비스듬한 시점 (demo 910~911) */
   private resetCamera() {
-    const span = this.span, cs = this.camSpan()
-    this.camera.near = Math.max(0.1, span / 400)
-    this.camera.far = Math.max(span, cs) * 50
-    this.camera.updateProjectionMatrix()
+    const cs = this.camSpan()
+    this.fitCamera()
     this.controls.target.set(0, 0, 0)
     this.camera.position.set(-cs * 0.25, cs * 0.55, cs * 0.75)
     this.controls.update()
     this.nav.cancel()
     this.camMode = '3d'
+    // 걷는 중에 도면이 바뀌면, 걷기를 끝낼 때 새 도면의 처음 시점으로
+    if (this.driver) this.orbit = { pos: this.camera.position.clone(), target: this.controls.target.clone() }
+  }
+
+  /** 걷기 = 시야각 70° · 가까운 면 5 cm · 먼 면 1 km(큰 도면은 더), 궤도 = 45° · 도면 크기 기준 (원래 값) */
+  private fitCamera() {
+    const cam = this.camera, span = this.span
+    if (this.driver) {
+      cam.fov = WALK_FOV
+      cam.near = WALK_NEAR
+      cam.far = Math.max(1000, span * 4)
+    } else {
+      cam.fov = 45
+      cam.near = Math.max(0.1, span / 400)
+      cam.far = Math.max(span, this.camSpan()) * 50
+    }
+    cam.updateProjectionMatrix()
   }
 
   /** 보기 모드(3D 실사 / 도면)·품질에 맞춰 배경·조명·선 색·그림자를 바꿈 (demo applyLook) */
@@ -428,8 +508,9 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
     const is3d = this.mode === '3d', span = this.span
     const { scene, sun } = this
     scene.background = this.bg.setHex(is3d ? BG_3D : BG_PLAN)
-    this.fog.near = span * 2.2
-    this.fog.far = span * 6
+    const fog = this.driver ? walkFog(span, this.ghost) : { near: span * 2.2, far: span * 6 }
+    this.fog.near = fog.near
+    this.fog.far = fog.far
     scene.fog = is3d ? this.fog : null
     this.ground.material = is3d ? this.mats.ground3d : this.mats.groundPlan
     this.tex.concrete.repeat.set((span * 3) / 4, (span * 3) / 4)
@@ -490,7 +571,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
   }
 
   /** 화면 좌표로 this.ray 를 맞춤 (월드). 캔버스 크기가 0 이면 false */
-  private rayAt(ev: MouseEvent): boolean {
+  private rayAt(ev: { clientX: number; clientY: number }): boolean {
     const rect = this.renderer.domElement.getBoundingClientRect()
     if (!rect.width || !rect.height) return false
     this.ndc.set(((ev.clientX - rect.left) / rect.width) * 2 - 1, -((ev.clientY - rect.top) / rect.height) * 2 + 1)
@@ -592,7 +673,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
     const d = this.drag
     if (!d) return
     this.drag = null
-    this.controls.enabled = true
+    this.controls.enabled = !this.driver
     const dom = this.renderer.domElement
     dom.style.cursor = ''
     if (dom.hasPointerCapture(d.pointerId)) dom.releasePointerCapture(d.pointerId)
@@ -638,7 +719,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost {
   }
 
   private onDblClick = (ev: MouseEvent) => {
-    if (!this.plan) return
+    if (!this.plan || this.driver) return
     const hit = this.hitGround(ev)
     if (hit) this.nav.focusOn(hit, this.camera.position.distanceTo(this.controls.target) * 0.35)
   }
