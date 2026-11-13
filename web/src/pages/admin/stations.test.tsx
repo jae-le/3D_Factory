@@ -118,6 +118,35 @@ describe('관리자 › 공정·생산 기준정보', () => {
     await waitFor(() => expect(sent(fetch, 'PATCH')).toHaveLength(1))
     const [url, init] = sent(fetch, 'PATCH')[0]
     expect(url).toBe('/api/projects/21')
-    expect(JSON.parse(String(init!.body))).toEqual({ name: '야월해상', done: 4, total: 13, period: "'25.09~'27.03", state: 'wait' })
+    expect(JSON.parse(String(init!.body))).toEqual({ done: 4, state: 'wait' }) // 바뀐 칸만
+  })
+
+  it('PJT 수정: 제작 수를 안 고쳤으면 보내지 않음 (상황판이 늘린 값을 덮지 않게)', async () => {
+    const fetch = show((_url, init) => (init?.method === 'PATCH' ? json(200, PROJECTS[0]) : null))
+    fireEvent.click(await screen.findByRole('button', { name: 'PJT 야월해상 수정' }))
+    fireEvent.change(screen.getByLabelText('기간'), { target: { value: "'25.10~'27.03" } })
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(sent(fetch, 'PATCH')).toHaveLength(1))
+    expect(JSON.parse(String(sent(fetch, 'PATCH')[0][1]!.body))).toEqual({ period: "'25.10~'27.03" })
+  })
+
+  it('공정 수정: 택타임(분)을 안 고쳤으면 초 그대로 (보내지 않음), 고치면 분→초', async () => {
+    const odd = [{ ...STATIONS[0], taktSec: 1234 }, STATIONS[1]] // 20.6분으로 보임
+    const fetch = show((url, init) =>
+      init?.method === 'PATCH' ? json(200, odd[0]) : url === '/api/drawings/1/stations' ? json(200, odd) : null)
+    fireEvent.click(await screen.findByRole('button', { name: 'Hub 조립장 수정' }))
+    expect(screen.getByLabelText('택타임(분)')).toHaveValue(20.6)
+    fireEvent.change(screen.getByLabelText('이름'), { target: { value: 'Hub 조립' } })
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(sent(fetch, 'PATCH')).toHaveLength(1))
+    const body = JSON.parse(String(sent(fetch, 'PATCH')[0][1]!.body)) as Record<string, unknown>
+    expect(body.name).toBe('Hub 조립')
+    expect(body).not.toHaveProperty('taktSec')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    fireEvent.click(await screen.findByRole('button', { name: 'Hub 조립장 수정' }))
+    fireEvent.change(screen.getByLabelText('택타임(분)'), { target: { value: '21' } })
+    fireEvent.click(screen.getByRole('button', { name: '저장' }))
+    await waitFor(() => expect(sent(fetch, 'PATCH')).toHaveLength(2))
+    expect(JSON.parse(String(sent(fetch, 'PATCH')[1][1]!.body))).toMatchObject({ taktSec: 1260 })
   })
 })

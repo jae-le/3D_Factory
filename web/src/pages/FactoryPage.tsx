@@ -80,10 +80,11 @@ export function FactoryPage() {
       return true
     }
   })
-  const togglePanel = () => {
-    setPanelOpen(!panelOpen)
+  /** 객체 패널 열기·닫기 (레일 버튼은 보이는 상태 기준으로 뒤집음 — 패널이 안 그려진 동안 눌러도 한 번에 열림) */
+  const setPanel = (open: boolean) => {
+    setPanelOpen(open)
     try {
-      localStorage.setItem(OBJECTS_PANEL_KEY, panelOpen ? '0' : '1')
+      localStorage.setItem(OBJECTS_PANEL_KEY, open ? '1' : '0')
     } catch {
       /* 저장 못 해도 동작 */
     }
@@ -303,8 +304,9 @@ export function FactoryPage() {
       onAddModel={() => setAddingModel(true)}
     />
   )
+  const objectsOpen = panelOpen && !!side
   return (
-    <AppShell active="factory" head={head} side={side} panel={{ objectsOpen: panelOpen && !!side, onObjects: togglePanel }}>
+    <AppShell active="factory" head={head} side={side} panel={{ objectsOpen, onObjects: () => setPanel(!objectsOpen) }}>
       {drawings.kind === 'loading' ? (
         <p className="empty-state" role="status">도면 목록 불러오는 중…</p>
       ) : list.length === 0 ? (

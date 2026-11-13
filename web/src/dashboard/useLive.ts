@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ApiError, apiJson, UNAUTHORIZED_EVENT } from '../api/client'
 import { liveReducer } from './liveReducer'
 import type { Conn, LiveMessage, LiveState } from './types'
 
@@ -9,6 +10,13 @@ export const CLOSE_NOT_FOUND = 4404
 
 export function liveUrl(drawingId: number, loc: Pick<Location, 'protocol' | 'host'> = window.location): string {
   return `${loc.protocol === 'https:' ? 'wss:' : 'ws:'}//${loc.host}/ws/live?drawing=${drawingId}`
+}
+
+/** 로그인이 풀렸는지 확인 — 풀렸으면 화면 전체에 알림 (WebSocket 핸드셰이크 거부는 브라우저가 1006 끊김으로만 알려 줌) */
+function checkSession() {
+  apiJson('/api/auth/me').catch((e: unknown) => {
+    if (e instanceof ApiError && e.kind === 'unauthorized') window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+  })
 }
 
 export interface Live { conn: Conn; data: LiveState | null }
@@ -28,6 +36,7 @@ export function useLive(drawingId: number | null): Live {
     const connect = () => {
       const sock = new WebSocket(liveUrl(drawingId))
       ws = sock
+      let gotSnapshot = false
       sock.onmessage = (e: MessageEvent) => {
         if (stopped || ws !== sock) return
         let msg: LiveMessage
@@ -36,7 +45,10 @@ export function useLive(drawingId: number | null): Live {
         } catch {
           return
         }
-        if (msg.type === 'snapshot') tries = 0
+        if (msg.type === 'snapshot') {
+          tries = 0
+          gotSnapshot = true
+        }
         update((h) => ({ ...h, conn: 'live', data: liveReducer(h.data, msg) }))
       }
       sock.onclose = (e: CloseEvent) => {
@@ -46,6 +58,7 @@ export function useLive(drawingId: number | null): Live {
           update((h) => ({ ...h, conn: 'closed' }))
           return
         }
+        if (!gotSnapshot) checkSession() // snapshot 전에 끊김 = 접속 거부일 수 있음 → 로그인이 풀렸으면 로그인 화면으로
         update((h) => ({ ...h, conn: 'retrying' }))
         timer = setTimeout(connect, BACKOFF[Math.min(tries, BACKOFF.length - 1)])
         tries++

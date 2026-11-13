@@ -79,17 +79,17 @@ export function StationsPage() {
   const saveStation = (e: FormEvent) => {
     e.preventDefault()
     if (dialog?.kind !== 'station' || drawingId == null) return
-    const r = parseStationForm(sf)
-    if ('error' in r) return setDialogError(r.error)
     const s = dialog.s
+    const r = parseStationForm(sf, s)
+    if ('error' in r) return setDialogError(r.error)
     void run(() => (s ? updateStation(s.id, r.input) : createStation(drawingId, r.input)))
   }
   const saveProject = (e: FormEvent) => {
     e.preventDefault()
     if (dialog?.kind !== 'project' || drawingId == null) return
-    const r = parseProjectForm(pf)
-    if ('error' in r) return setDialogError(r.error)
     const p = dialog.p
+    const r = parseProjectForm(pf, p)
+    if ('error' in r) return setDialogError(r.error)
     void run(() => (p ? updateProject(p.id, r.input) : createProject(drawingId, r.input)))
   }
   const move = (i: number, d: -1 | 1) => {

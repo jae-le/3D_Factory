@@ -1,6 +1,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError, apiJson, UNAUTHORIZED_EVENT } from '../api/client'
 import { useLive } from './useLive'
+
+vi.mock('../api/client', async (importOriginal) => ({ ...(await importOriginal<typeof import('../api/client')>()), apiJson: vi.fn() }))
+const me = vi.mocked(apiJson)
 
 /** 가짜 WebSocket: 만든 것을 모아 두고 테스트가 메시지·끊김을 일으킴 */
 class FakeWS {
@@ -32,6 +36,8 @@ describe('useLive', () => {
     FakeWS.all = []
     vi.stubGlobal('WebSocket', FakeWS)
     vi.useFakeTimers()
+    me.mockReset()
+    me.mockResolvedValue({})
   })
   afterEach(() => {
     vi.useRealTimers()
@@ -70,6 +76,41 @@ describe('useLive', () => {
     act(() => last().drop())
     act(() => vi.advanceTimersByTime(1000))
     expect(FakeWS.all).toHaveLength(n + 1)
+  })
+
+  it('snapshot 전에 끊기면 로그인 확인, 풀렸으면 로그아웃 알림', async () => {
+    me.mockRejectedValue(new ApiError('unauthorized', 401, '로그인이 필요합니다.'))
+    const lost = vi.fn()
+    window.addEventListener(UNAUTHORIZED_EVENT, lost)
+    try {
+      renderHook(() => useLive(7))
+      await act(async () => last().drop())
+      expect(me).toHaveBeenCalledWith('/api/auth/me')
+      expect(lost).toHaveBeenCalledTimes(1)
+    } finally {
+      window.removeEventListener(UNAUTHORIZED_EVENT, lost)
+    }
+  })
+
+  it('snapshot 뒤 끊김, 4404, 다른 오류는 로그아웃 알림 없음', async () => {
+    const lost = vi.fn()
+    window.addEventListener(UNAUTHORIZED_EVENT, lost)
+    try {
+      renderHook(() => useLive(7))
+      act(() => last().send(snap(7)))
+      await act(async () => last().drop())
+      expect(me).not.toHaveBeenCalled()
+      me.mockRejectedValue(new ApiError('network', null, '서버에 연결할 수 없습니다.'))
+      act(() => vi.advanceTimersByTime(1000))
+      await act(async () => last().drop()) // 새 연결은 snapshot 전 → 확인은 하지만 로그인은 그대로
+      expect(me).toHaveBeenCalledTimes(1)
+      act(() => vi.advanceTimersByTime(1000))
+      await act(async () => last().drop(4404))
+      expect(me).toHaveBeenCalledTimes(1)
+      expect(lost).not.toHaveBeenCalled()
+    } finally {
+      window.removeEventListener(UNAUTHORIZED_EVENT, lost)
+    }
   })
 
   it('4404 면 다시 접속하지 않음', () => {
