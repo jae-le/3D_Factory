@@ -14,7 +14,8 @@ export interface PlanMeshes {
 }
 
 /** 바닥 장식 높이 (z-fighting 방지): 구역 면 < 구역 테두리 < 선 < 글자 */
-export const DECAL_Y = { zone: 0.02, zoneEdge: 0.025, line: 0.03, label: 0.04 }
+export const DECAL_Y = { zoneEdge: 0.025, line: 0.03, label: 0.04 }
+const ZONE_EDGE = 0x5b6270
 
 /** plan → 3D (로컬 좌표: 도면 가운데 원점, XZ 평면, m). 회전·반전은 FactoryScene 의 root 가 맡음 */
 export function planToMeshes(plan: Plan, mats: Materials, opts: { labels: boolean }): PlanMeshes {
@@ -70,19 +71,12 @@ export function planToMeshes(plan: Plan, mats: Materials, opts: { labels: boolea
       }
     }
 
-  // 구역: 반투명 바닥 면 + 테두리 + 이름 표 (톤매핑 제외 — 원색 유지)
+  // 구역: 바닥 테두리 + 이름 표 (demo 처럼 면 색 없음 — CAD 선 색은 의미가 없어 중립 회색)
   const zoneLabels: ZoneLabel[] = []
   for (const z of plan.zones) {
-    const shape = new THREE.Shape(z.poly.map(([x, y]) => new THREE.Vector2(x - b.w / 2, y - b.h / 2)))
-    const geo = new THREE.ShapeGeometry(shape)
-    geo.rotateX(-Math.PI / 2)
-    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: z.color, transparent: true, opacity: 0.38, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }))
-    mesh.position.y = DECAL_Y.zone
-    mesh.userData = { kind: 'zone', id: z.id, name: z.name }
-    zones.add(mesh)
     const edge = new THREE.LineLoop(
       new THREE.BufferGeometry().setFromPoints(z.poly.map(([x, y]) => new THREE.Vector3(...xz(L(x, y))))),
-      new THREE.LineBasicMaterial({ color: z.color, transparent: true, opacity: 0.9, toneMapped: false }),
+      new THREE.LineBasicMaterial({ color: ZONE_EDGE, transparent: true, opacity: 0.55 }),
     )
     edge.userData = { kind: 'zoneEdge', id: z.id }
     zones.add(edge)

@@ -49,19 +49,16 @@ describe('planToMeshes', () => {
     expect(parts[0].position.y).toBeCloseTo(0.6)
   })
 
-  it('기둥은 H빔 묶음, 구역은 바닥 면 하나 + 테두리', () => {
+  it('기둥은 H빔 묶음, 구역은 바닥 테두리만 (면 색 없음)', () => {
     const cols = child(m.group, 'solids').children.filter((o) => o.userData.kind === 'column')
     expect(cols).toHaveLength(1)
     expect((cols[0] as THREE.Group).children).toHaveLength(4)
     const zones = child(m.group, 'zones').children
-    const faces = zones.filter((o) => o.userData.kind === 'zone') as THREE.Mesh[]
-    expect(faces).toHaveLength(1)
-    expect(faces[0].userData).toMatchObject({ kind: 'zone', id: 'z1', name: 'Hub' })
-    expect((faces[0].material as THREE.MeshBasicMaterial).toneMapped).toBe(false)
+    expect(zones.filter((o) => o.userData.kind === 'zone')).toHaveLength(0)
     const edges = zones.filter((o) => o.userData.kind === 'zoneEdge') as THREE.LineLoop[]
     expect(edges).toHaveLength(1)
     expect(edges[0].geometry.attributes.position.count).toBe(4)
-    expect(edges[0].position.y + edges[0].geometry.attributes.position.getY(0)).toBeGreaterThan(faces[0].position.y)
+    expect(edges[0].position.y + edges[0].geometry.attributes.position.getY(0)).toBeGreaterThan(0)
   })
 
   it('구역 이름 표 자리: 다각형 무게중심', () => {
