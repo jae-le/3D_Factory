@@ -37,3 +37,6 @@ factory3d:
   model:
     max-bytes: ${F3D_MODEL_MAX:104857600}        # glb 100MB
     max-thumbnail-bytes: ${F3D_MODEL_THUMB_MAX:2097152}
+  live:
+    enabled: ${F3D_LIVE_ENABLED:true}          # 가상 MES 1초 진행 (테스트는 끔 — advance 를 직접 부름)
+    time-scale: ${F3D_LIVE_TIME_SCALE:1}       # 진행 속도 배율 (1 = 실제 시간, 화면 확인은 30)

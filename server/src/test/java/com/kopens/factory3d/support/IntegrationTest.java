@@ -67,6 +67,7 @@ public abstract class IntegrationTest {
         r.add("spring.datasource.username", () -> USER);
         r.add("spring.datasource.password", () -> PASSWORD);
         r.add("factory3d.data-dir", dataDir::toString);
+        r.add("factory3d.live.enabled", () -> "false"); // 1초 진행은 테스트가 advance 로 직접
     }
 
     @Autowired protected MockMvc mvc;

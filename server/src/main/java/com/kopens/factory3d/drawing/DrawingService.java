@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.InputStreamSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,10 +40,11 @@ public class DrawingService {
     private final ObjectMapper json;
     private final long maxSource;
     private final long maxPlan;
+    private final ApplicationEventPublisher events;
 
     public DrawingService(DrawingMapper drawings, DataDir dataDir, AuditService audit, PlacementMapper placements, ObjectMapper json,
             @Value("${factory3d.drawing.max-source-bytes:52428800}") long maxSource,
-            @Value("${factory3d.drawing.max-plan-bytes:20971520}") long maxPlan) {
+            @Value("${factory3d.drawing.max-plan-bytes:20971520}") long maxPlan, ApplicationEventPublisher events) {
         this.drawings = drawings;
         this.dataDir = dataDir;
         this.audit = audit;
@@ -50,6 +52,7 @@ public class DrawingService {
         this.json = json;
         this.maxSource = maxSource;
         this.maxPlan = maxPlan;
+        this.events = events;
     }
 
     public List<DrawingSummary> list() {
@@ -126,6 +129,7 @@ public class DrawingService {
         DrawingDetail d = get(id);
         drawings.delete(id);
         audit.log("DRAWING_DELETE", d.name(), "id=" + id);
+        events.publishEvent(new DrawingDeleted(id));
         Path dir = dataDir.resolve("drawings/" + id);
         try (Stream<Path> files = Files.exists(dir) ? Files.walk(dir) : Stream.empty()) {
             files.sorted(Comparator.reverseOrder()).forEach(f -> f.toFile().delete());
