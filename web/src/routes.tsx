@@ -6,6 +6,7 @@ import { DashboardPage } from './pages/DashboardPage'
 import { DrawingsPage } from './pages/admin/DrawingsPage'
 import { LoginHistoryPage } from './pages/admin/LoginHistoryPage'
 import { ModelsPage } from './pages/admin/ModelsPage'
+import { StationsPage } from './pages/admin/StationsPage'
 import { UsersPage } from './pages/admin/UsersPage'
 import { ErrorPage } from './pages/ErrorPage'
 import { FactoryPage } from './pages/FactoryPage'
@@ -29,6 +30,7 @@ export const routes: RouteObject[] = [
       { path: 'audit', element: <AuditPage /> },
       { path: 'drawings', element: <DrawingsPage /> },
       { path: 'models', element: <ModelsPage /> },
+      { path: 'stations', element: <StationsPage /> },
     ],
   },
   { path: '*', element: <ErrorPage code="404" /> },
