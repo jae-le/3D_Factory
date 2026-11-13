@@ -171,8 +171,15 @@ public class VirtualMes implements ProductionSource {
         }
     }
 
-    public synchronized void unload(long drawingId) {
-        boards.remove(drawingId);
+    /** 도면이 지워짐: 내리고, 그 도면 구독자에게 Gone 을 전달한 뒤 목록을 지움 (받는 쪽이 4404 로 닫음) */
+    public void unload(long drawingId) {
+        synchronized (deliverLock) {
+            synchronized (this) {
+                boards.remove(drawingId);
+            }
+            deliver(new Delivery(drawingId, List.of(new LiveMessages.Gone(drawingId))));
+            listeners.remove(drawingId);
+        }
     }
 
     @TransactionalEventListener(fallbackExecution = true)

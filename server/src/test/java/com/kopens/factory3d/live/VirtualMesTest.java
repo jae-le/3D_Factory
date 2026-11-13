@@ -216,6 +216,21 @@ class VirtualMesTest extends IntegrationTest {
         assertThat(mes.loaded()).contains(drawing);
         mvc.perform(delete("/api/drawings/" + drawing).with(user("admin").roles("ADMIN")).with(csrf())).andExpect(status().isNoContent());
         assertThat(mes.loaded()).doesNotContain(drawing);
+        assertThat(got).last().isEqualTo(new LiveMessages.Gone(drawing)); // 구독자에게 알림 → 4404 로 닫힘
+        assertThat(mes.hasListeners(drawing)).isFalse();
+    }
+
+    @Test
+    void PJT_제작수_저장은_늘리기만_전체를_넘지_않음() {
+        mes.snapshot(drawing); // 메모리 done 3
+        jdbc.update("update project set done = 8 where id = ?", project); // 그 사이 DB 가 더 큼
+        mes.override(drawing, station, 99.5, 99.5, 1);
+        mes.advance(1); // 메모리 4 → DB 는 8 그대로
+        assertThat(jdbc.queryForObject("select done from project where id = ?", Integer.class, project)).isEqualTo(8);
+        jdbc.update("update project set done = 2, total = 4 where id = ?", project);
+        mes.override(drawing, station, 99.5, 99.5, 1);
+        mes.advance(1); // 메모리 5 → 전체 4 를 넘지 않음
+        assertThat(jdbc.queryForObject("select done from project where id = ?", Integer.class, project)).isEqualTo(4);
     }
 
     @Test

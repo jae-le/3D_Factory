@@ -64,6 +64,21 @@ class LiveOutboxTest {
     }
 
     @Test
+    void 도면이_지워지면_남은_줄을_버리고_4404로_닫음() throws Exception {
+        var t = new StalledTransport();
+        var box = new LiveOutbox(1, t, executor, 1000);
+        box.start("snapshot");
+        assertThat(t.entered.await(5, SECONDS)).isTrue();
+        box.onMessage("queued");
+        box.onMessage(new LiveMessages.Gone(1));
+        assertThat(t.closed.get(5, SECONDS).getCode()).isEqualTo(4404);
+        box.onMessage("after"); // 닫힌 뒤는 무시
+        t.gate.countDown();
+        Thread.sleep(100);
+        assertThat(t.sent).containsExactly("snapshot");
+    }
+
+    @Test
     void 줄이_넘치면_닫음() throws Exception {
         var t = new StalledTransport();
         var box = new LiveOutbox(1, t, executor, 10);

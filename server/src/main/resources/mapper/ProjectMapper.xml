@@ -37,7 +37,8 @@
         where id = #{id}
     </update>
 
-    <update id="setDone">update project set done = #{done} where id = #{id}</update>
+    <!-- 상황판 완료는 늘리기만 (늦게 온 낮은 값이 더 큰 값을 덮지 않게), 전체를 넘지 않게 -->
+    <update id="setDone">update project set done = least(total, greatest(done, #{done})) where id = #{id}</update>
 
     <delete id="delete">delete from project where id = #{id}</delete>
 </mapper>

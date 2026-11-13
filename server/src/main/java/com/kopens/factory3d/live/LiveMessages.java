@@ -24,4 +24,7 @@ public final class LiveMessages {
     public record EventMessage(String type, LiveEvent event) {}
 
     public record Projects(String type, List<ProjectLive> projects) {}
+
+    /** 보내지 않는 내부 신호: 도면이 지워짐 → 받는 쪽(LiveOutbox)은 4404 로 연결을 닫음 */
+    public record Gone(long drawingId) {}
 }

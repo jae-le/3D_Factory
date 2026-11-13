@@ -22,7 +22,7 @@ public interface ProjectMapper {
 
     void update(@Param("id") long id, @Param("row") Row row);
 
-    /** 상황판 한 대 완료 (VirtualMes) */
+    /** 상황판 한 대 완료 (VirtualMes) — done 은 늘리기만, total 을 넘지 않음 */
     void setDone(@Param("id") long id, @Param("done") int done);
 
     void delete(long id);

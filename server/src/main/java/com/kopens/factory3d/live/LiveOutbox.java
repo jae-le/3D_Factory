@@ -11,6 +11,7 @@ import org.springframework.web.socket.CloseStatus;
  * 세션 하나의 보낼 줄. onMessage 는 줄에 넣기만 하고 바로 돌아온다 (VirtualMes 가 deliverLock 을 쥔 채 부르므로 소켓을 만지지 않음).
  * 실제 보내기·닫기는 executor 에서 세션마다 한 번에 하나씩(drain) — 순서는 snapshot → 그 전에 온 것 → 그 뒤 것.
  * 줄이 cap 을 넘으면(느린 연결) 버리고 POLICY_VIOLATION 으로, 보내기가 실패하면 SESSION_NOT_RELIABLE 로 닫는다 (화면이 다시 붙음).
+ * Gone(도면이 지워짐)을 받으면 4404 로 닫는다 (화면은 다시 붙지 않음).
  */
 final class LiveOutbox implements LiveListener {
     /** 실제 보내기·닫기 (WebSocket 세션) */
@@ -50,6 +51,15 @@ final class LiveOutbox implements LiveListener {
 
     @Override
     public void onMessage(Object message) {
+        if (message instanceof LiveMessages.Gone) { // 도면이 지워짐 → 남은 줄은 버리고 4404 로 닫음 (화면은 다시 붙지 않음)
+            synchronized (this) {
+                if (closed) return;
+                closed = true;
+                queue.clear();
+            }
+            executor.execute(() -> transport.close(LiveSocketHandler.NOT_FOUND));
+            return;
+        }
         boolean overflow;
         synchronized (this) {
             if (closed) return;

@@ -145,6 +145,15 @@ class LiveSocketTest extends IntegrationTest {
     }
 
     @Test
+    void 도면이_지워지면_연결을_4404로_닫음() throws Exception {
+        var c = new Collector();
+        open(c, login(), null, String.valueOf(drawing)).get(5, SECONDS);
+        assertThat(c.messages.poll(5, SECONDS)).contains("\"type\":\"snapshot\"");
+        mes.unload(drawing); // DrawingDeleted 커밋 뒤와 같음
+        assertThat(c.closed.get(5, SECONDS)).isEqualTo(4404);
+    }
+
+    @Test
     void 다른_출처는_거부() throws Exception {
         String cookie = login();
         assertThat(rejectedStatus(open(new Collector(), cookie, "http://evil.example", String.valueOf(drawing)))).isEqualTo(403);
