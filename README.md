@@ -32,6 +32,12 @@ cd web && npm run dev               # http://localhost:5200 (화면, /api 는 80
 - 도면에 EQUIP/설비 레이어 글자·블록이 있으면 모델 이름·별칭과 맞춰 자동 배치합니다 (없으면 임시 상자).
 - 기본 모델을 다시 구우려면 `cd web && npm run bake:models` (Edge 필요), 기본 배치는 `npm run seed:placements`.
 
+### 상황판
+- 레일 `상황판`: 도면별 공정 현황 — 위 KPI 줄(가동·진행중·주의·지연·오늘 완료·계획 달성률), 설비 위 스테이션 칩(PJT·step·눈금 게이지·실적/목표), 바닥 상태 링, 아래 이벤트 줄, `제작·자재 현황` 서랍. 칩을 누르면 그 설비로 이동, 다시 누르면 전체 보기.
+- 데이터는 서버의 가상 MES 가 1초마다 만듭니다 (모든 사용자가 같은 숫자, WebSocket `/ws/live`). 진행 상태는 메모리라 서버를 다시 켜면 처음 값부터, PJT 제작 수·오늘 완료 수는 DB 에 남습니다.
+- 처음 실행하면 나셀 공장에 기본 공정 6개 · PJT 4개가 들어갑니다. 관리자 › 공정·생산 기준정보에서 고치면 상황판이 그 도면을 처음부터 다시 진행합니다.
+- 진행 속도는 `F3D_LIVE_TIME_SCALE` (기본 1 = 실제 시간, 화면 확인은 30).
+
 ## 배포 (jar 하나 + PostgreSQL)
 ```
 cd server && ./gradlew bootJar      # build/libs/factory3d.jar (화면 포함)
@@ -45,6 +51,8 @@ java -jar build/libs/factory3d.jar  # Java 21 필요
 | `F3D_DATA_DIR` | `../data` (업로드 파일, 작업 폴더에 따라 달라지므로 jar 배포에서는 절대 경로 권장) |
 | `F3D_TIME_ZONE` | `Asia/Seoul` |
 | `F3D_ADMIN_PASSWORD` | 비면 임의 생성 |
+| `F3D_LIVE_TIME_SCALE` | `1` (상황판 진행 배율) |
+| `F3D_LIVE_ORIGINS` | `http://localhost:5200` (WebSocket 허용 출처, 같은 출처는 항상 허용) |
 
 ## 테스트
 ```
@@ -53,4 +61,5 @@ cd web && npm test
 cd web && node e2e/p1-smoke.mjs http://localhost:8080 <처음 비밀번호> <새 비밀번호>   # 깨끗한 DB 의 실행 중인 서버로 (Microsoft Edge 필요)
 cd web && node e2e/p2-smoke.mjs http://localhost:8080 admin <비밀번호>   # 비밀번호 변경을 마친 계정으로: 3D·도면 보기·측정·도면 추가·도면 관리
 cd web && node e2e/p3-smoke.mjs http://localhost:8080 admin <비밀번호>   # P2 smoke 다음에: 객체 배치·편집·추가·관리
+cd web && node e2e/p4-smoke.mjs http://localhost:8080 admin <비밀번호>   # P3 smoke 다음에, 서버는 F3D_LIVE_TIME_SCALE=30 으로: 상황판·기준정보
 ```

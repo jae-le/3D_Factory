@@ -122,11 +122,12 @@
 
 /* 모달: 직각 + 그림자 + 어두운 바탕 (DESIGN.md) */
 .kp-overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: var(--kp-sp-16); background: rgba(0, 0, 0, 0.6); font-family: var(--kp-font); color: var(--kp-text); }
-.kp-modal { width: min(520px, 100%); background: var(--kp-white); box-shadow: var(--kp-shadow); }
-.kp-modal-head { height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--kp-sp-24); border-bottom: 1px solid var(--kp-border); }
+/* 창이 화면보다 길면 머리는 두고 본문만 스크롤 (저장 버튼이 화면 밖으로 나가지 않게) */
+.kp-modal { width: min(520px, 100%); max-height: calc(100dvh - 2 * var(--kp-sp-16)); display: flex; flex-direction: column; background: var(--kp-white); box-shadow: var(--kp-shadow); }
+.kp-modal-head { flex: none; height: 64px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--kp-sp-24); border-bottom: 1px solid var(--kp-border); }
 .kp-modal-head h2 { margin: 0; font-size: var(--kp-text-20); line-height: var(--kp-lh-20); font-weight: 500; }
 .kp-modal-x { border: 0; background: none; font-size: var(--kp-text-16); color: var(--kp-text-sub); cursor: pointer; }
-.kp-modal-body { padding: var(--kp-sp-24); }
+.kp-modal-body { min-height: 0; overflow-y: auto; padding: var(--kp-sp-24); }
 .kp-form { display: flex; flex-direction: column; gap: var(--kp-sp-16); }
 .kp-modal-actions { display: flex; justify-content: flex-end; gap: var(--kp-sp-8); margin-top: var(--kp-sp-24); }
 
