@@ -20,28 +20,11 @@ import { usePlacements } from '../objects/usePlacements'
 import type { Quality, SceneHost } from '../scene/FactoryScene'
 import { FactoryView } from '../scene/FactoryView'
 import type { SceneObject } from '../scene/objectLayer'
+import { loadQuality, saveQuality } from '../scene/qualityPref'
 import { ErrorPage } from './ErrorPage'
 
 const NO_MODELS: ModelInfo[] = []
 const RING_K = 0.62 // 링 반지름 = 설비 큰 변 × 0.62 (demo)
-
-/** 3D 공장 화면과 같은 저장값 f3d:view 의 quality */
-function loadQuality(): Quality {
-  try {
-    return JSON.parse(localStorage.getItem('f3d:view') ?? '{}').quality === 'low' ? 'low' : 'high'
-  } catch {
-    return 'high'
-  }
-}
-
-function saveQuality(q: Quality) {
-  try {
-    const v = JSON.parse(localStorage.getItem('f3d:view') ?? '{}') as object
-    localStorage.setItem('f3d:view', JSON.stringify({ ...v, quality: q }))
-  } catch {
-    /* 저장 못 해도 동작 */
-  }
-}
 
 /** /dashboard — 실시간 상황판: 3D(보기 전용) + KPI 줄 · 스테이션 칩 · 바닥 링 · 이벤트 줄 · 제작·자재 서랍 */
 export function DashboardPage() {

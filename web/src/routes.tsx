@@ -8,6 +8,7 @@ import { LoginHistoryPage } from './pages/admin/LoginHistoryPage'
 import { ModelsPage } from './pages/admin/ModelsPage'
 import { StationsPage } from './pages/admin/StationsPage'
 import { UsersPage } from './pages/admin/UsersPage'
+import { WalkPage } from './pages/WalkPage'
 import { ErrorPage } from './pages/ErrorPage'
 import { FactoryPage } from './pages/FactoryPage'
 import { LoginPage } from './pages/LoginPage'
@@ -19,6 +20,7 @@ export const routes: RouteObject[] = [
   { path: '/password', element: <RequireAuth><PasswordPage /></RequireAuth> },
   { path: '/', element: <RequireAuth><FactoryPage /></RequireAuth>, errorElement: <ErrorPage code="500" /> },
   { path: '/dashboard', element: <RequireAuth><DashboardPage /></RequireAuth>, errorElement: <ErrorPage code="500" /> },
+  { path: '/walk', element: <RequireAuth><WalkPage /></RequireAuth>, errorElement: <ErrorPage code="500" /> },
   {
     path: '/admin',
     element: <RequireAuth role="ADMIN"><AdminLayout /></RequireAuth>,

@@ -3,7 +3,7 @@ import type { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
 const NAV_KEYS = new Set(['w', 'a', 's', 'd', 'q', 'e', 'r', 'f', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright', 'shift'])
 /** 글자 입력 중이거나 대화 상자 안에 포커스가 있으면 이동 키 무시 */
-const typing = () => {
+export const typing = (): boolean => {
   const el = document.activeElement
   return /INPUT|SELECT|TEXTAREA/.test(el?.tagName ?? '') || !!el?.closest('[role=dialog]')
 }

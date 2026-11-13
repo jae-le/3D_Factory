@@ -1,8 +1,8 @@
-import { Bot, Box, Boxes, LayoutDashboard, Play, Settings, type LucideIcon } from 'lucide-react'
+import { Bot, Box, Boxes, Footprints, LayoutDashboard, Play, Settings, type LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { hasRole, useAuth } from '../auth/context'
 
-export type RailKey = 'factory' | 'objects' | 'dashboard' | 'run' | 'chat' | 'admin'
+export type RailKey = 'factory' | 'objects' | 'walk' | 'dashboard' | 'run' | 'chat' | 'admin'
 
 /** 3D 공장 화면에서 레일 '객체' 를 누르면 옆 패널을 열고 닫음. 다른 화면에서 누르면 공장 화면으로 가서 패널을 엶 */
 export interface RailPanel {
@@ -20,6 +20,7 @@ interface Item {
 const MENU: Item[] = [
   { key: 'factory', label: '3D 공장', icon: Box, to: '/' },
   { key: 'objects', label: '객체', icon: Boxes, to: '/' },
+  { key: 'walk', label: '체험', icon: Footprints, to: '/walk' },
   { key: 'dashboard', label: '상황판', icon: LayoutDashboard, to: '/dashboard' },
   { key: 'run', label: '실행', icon: Play },
   { key: 'chat', label: 'AI 챗봇', icon: Bot },
