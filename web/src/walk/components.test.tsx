@@ -79,7 +79,7 @@ describe('체험 공간 덮개', () => {
   it('미니맵: 폭 280 · 도면 비율 높이, 내 위치를 data-pos 로', () => {
     render(<Minimap plan={PLAN} objects={[]} me={() => ({ x: 1.234, y: 5, yaw: 0 })} />)
     const cv = screen.getByRole('img', { name: '미니맵' })
-    expect(cv).toHaveStyle({ width: '280px', height: '148px' })
+    expect(cv).toHaveStyle({ width: '280px', height: '150px' })
     expect(cv).toHaveAttribute('data-pos', '1.23,5.00')
   })
 

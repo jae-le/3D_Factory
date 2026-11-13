@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef } from 'react'
 import type { Plan } from '../drawing/plan/types'
-import { drawMinimap, miniFrame, type MiniMe, type MiniObject } from './minimap'
+import { drawMinimap, miniFrame, pushTrail, type MiniMe, type MiniObject } from './minimap'
 
 interface Props { plan: Plan; objects: MiniObject[]; me: () => MiniMe }
 
-/** 오른쪽 아래 미니맵: 0.1초마다 다시 그림. data-pos = 내 위치(plan m, 실제 화면 확인용) */
+/** 오른쪽 아래 미니맵: 0.1초마다 다시 그림, 지나온 길을 빛나는 선으로. data-pos = 내 위치(plan m, 실제 화면 확인용) */
 export function Minimap({ plan, objects, me }: Props) {
   const ref = useRef<HTMLCanvasElement>(null)
   const meRef = useRef(me)
@@ -12,6 +12,10 @@ export function Minimap({ plan, objects, me }: Props) {
     meRef.current = me
   })
   const frame = useMemo(() => miniFrame(plan), [plan])
+  const trail = useRef<[number, number][]>([])
+  useEffect(() => {
+    trail.current = [] // 도면이 바뀌면 경로 새로
+  }, [frame])
   const dpr = Math.min(window.devicePixelRatio || 1, 2)
   useEffect(() => {
     const el = ref.current
@@ -20,9 +24,10 @@ export function Minimap({ plan, objects, me }: Props) {
     const draw = () => {
       const p = meRef.current()
       el.dataset.pos = `${p.x.toFixed(2)},${p.y.toFixed(2)}`
+      trail.current = pushTrail(trail.current, p.x, p.y)
       if (!ctx) return
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      drawMinimap(ctx, frame, plan, objects, p)
+      drawMinimap(ctx, frame, plan, objects, p, trail.current.slice(0, -1))
     }
     draw()
     const t = setInterval(draw, 100)

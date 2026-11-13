@@ -18,6 +18,7 @@ import { loadQuality, saveQuality } from '../scene/qualityPref'
 import { buildColliders, type Solid } from '../walk/colliders'
 import { WalkController, type WalkMode } from '../walk/controller'
 import { Minimap } from '../walk/WalkMinimap'
+import type { MiniObject } from '../walk/minimap'
 import { WALK } from '../walk/player'
 import { findSpawn } from '../walk/spawn'
 import { TouchJoystick } from '../walk/TouchJoystick'
@@ -80,6 +81,16 @@ export function WalkPage() {
         const m = p.modelId != null ? (byId.get(p.modelId) ?? null) : null
         const size = m ?? BOX_SIZE
         return { id: p.id, name: p.name, url: m ? modelFileUrl(m) : null, sizeX: size.sizeX, sizeY: size.sizeY, sizeZ: size.sizeZ, x: p.x, y: p.y, rot: p.rot, label: p.hintLabel ?? p.name }
+      }),
+    [placements.list, byId],
+  )
+  // 미니맵: 분류 색으로 그리게 모델 분류를 함께
+  const miniObjects = useMemo<MiniObject[]>(
+    () =>
+      placements.list.map((p) => {
+        const m = p.modelId != null ? (byId.get(p.modelId) ?? null) : null
+        const size = m ?? BOX_SIZE
+        return { x: p.x, y: p.y, rot: p.rot, sizeX: size.sizeX, sizeY: size.sizeY, category: m?.category ?? null }
       }),
     [placements.list, byId],
   )
@@ -260,7 +271,7 @@ export function WalkPage() {
           {ctl && plan ? (
             <>
               <WalkHud mode={mode} zone={zone} tip={tip && tipName ? { name: tipName, x: tip.x, y: tip.y } : null} onTip={() => tip && setOpenId(tip.id)} />
-              <Minimap plan={plan} objects={sceneObjects} me={() => ctl.player} />
+              <Minimap plan={plan} objects={miniObjects} me={() => ctl.player} />
               {opened && <WalkDetail placement={opened} model={openedModel} station={station} project={project} onClose={() => setOpenId(null)} />}
               {input.joy && <TouchJoystick joy={input.joy} />}
             </>
