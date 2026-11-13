@@ -73,6 +73,19 @@ describe('밀어내기', () => {
     expect(p.y).toBeCloseTo(5)
   })
 
+  it('30° 회전된 사각형: 회전 방향이 틀리면 잡히는 비대칭 각도', () => {
+    const a = Math.PI / 6, c: Colliders = { segs: [], rects: [{ cx: 5, cy: 5, hw: 2, hh: 0.5, rot: a }] }
+    const ux = [Math.cos(a), Math.sin(a)], uy = [-Math.sin(a), Math.cos(a)] // 사각형의 긴 축 · 짧은 축 (반시계 30°)
+    // 긴 축 위 1.5 m · 짧은 축 바깥 0.6 m (면에서 0.1 m) → 짧은 축으로 0.95 m 까지 밀려남
+    const p = collide({ x: 5 + ux[0] * 1.5 + uy[0] * 0.6, y: 5 + ux[1] * 1.5 + uy[1] * 0.6 }, R, c, B)
+    expect(p.x).toBeCloseTo(5 + ux[0] * 1.5 + uy[0] * 0.95)
+    expect(p.y).toBeCloseTo(5 + ux[1] * 1.5 + uy[1] * 0.95)
+    // 반대로 돌린(−30°) 자리에서는 사각형에 닿지 않아 그대로
+    const q = { x: 5 + Math.cos(-a) * 1.5 - Math.sin(-a) * 0.6, y: 5 + Math.sin(-a) * 1.5 + Math.cos(-a) * 0.6 }
+    expect(collide(q, R, c, B)).toEqual(q)
+    expect(clearance(q.x, q.y, c)).toBeGreaterThan(R)
+  })
+
   it('사각형 안에 들어가 있으면 가장 가까운 면 밖으로', () => {
     const c: Colliders = { segs: [], rects: [{ cx: 5, cy: 5, hw: 2, hh: 1, rot: 0 }] }
     const p = collide({ x: 6.8, y: 5.2 }, R, c, B)

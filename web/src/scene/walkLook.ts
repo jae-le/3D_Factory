@@ -10,7 +10,7 @@ export interface CameraPose { eye: PlanPoint; look: PlanPoint }
 export interface CameraDriver { update(dt: number): CameraPose }
 
 export const WALK_FOV = 70
-export const WALK_NEAR = 0.05 // 벽에서 0.45 m 떨어져도 화면이 잘리지 않게
+export const WALK_NEAR = 0.1 // 벽에서 0.45 m 떨어져도 화면이 잘리지 않게
 export const GHOST_OPACITY = 0.13
 const GHOST_KINDS = new Set(['wall', 'partition', 'plinth'])
 const tmp = new THREE.Vector3()

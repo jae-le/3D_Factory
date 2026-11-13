@@ -5,6 +5,7 @@ import { moveInput, step, turn, WALK, type Player } from './player'
 
 export type WalkMode = 'walk' | 'overview'
 type Bounds = { w: number; h: number }
+type Flip = 1 | -1
 
 const OV_SPIN = 0.05 // 조감 뷰 자동 회전 (rad/s, 한 바퀴 약 2분)
 const OV_LERP = 0.06 // 참고 파일: 60fps 한 프레임에 6% 씩 다가감
@@ -26,18 +27,22 @@ export class WalkController implements CameraDriver {
   private joy = { x: 0, y: 0 }
   private colliders: Colliders
   private bounds: Bounds
+  /** 도면 좌우 반전(plan.flip): 반전되면 화면 오른쪽 = plan 왼쪽이라 옆걸음·좌우 끌기를 뒤집음 */
+  private flip: Flip
   private ovAngle = 0
   private ovEye: CameraPose['eye'] | null = null
 
-  constructor(colliders: Colliders, bounds: Bounds, start: { x: number; y: number }) {
+  constructor(colliders: Colliders, bounds: Bounds, start: { x: number; y: number }, flip: Flip = 1) {
     this.colliders = colliders
     this.bounds = bounds
+    this.flip = flip
     this.player = { x: start.x, y: start.y, yaw: 0, pitch: 0, bobT: 0 }
   }
 
-  setColliders(c: Colliders, b: Bounds): void {
+  setColliders(c: Colliders, b: Bounds, flip: Flip = this.flip): void {
     this.colliders = c
     this.bounds = b
+    this.flip = flip
   }
 
   keyDown(code: string): void {
@@ -59,8 +64,9 @@ export class WalkController implements CameraDriver {
 
   /** 걷기 = 시점 회전, 조감 = 궤도 각도 (참고 파일 mousemove·touchmove) */
   drag(dx: number, dy: number, touch = false): void {
-    if (this.mode === 'walk') this.player = turn(this.player, dx, dy, touch ? WALK.touchLook : WALK.drag)
-    else this.ovAngle -= dx * (touch ? WALK.ovTouch : WALK.ovDrag)
+    const sx = dx * this.flip // 화면 오른쪽 끌기 = 화면 오른쪽으로 돎 (반전 도면에서도)
+    if (this.mode === 'walk') this.player = turn(this.player, sx, dy, touch ? WALK.touchLook : WALK.drag)
+    else this.ovAngle -= sx * (touch ? WALK.ovTouch : WALK.ovDrag)
   }
 
   setMode(m: WalkMode): void {
@@ -74,10 +80,11 @@ export class WalkController implements CameraDriver {
   }
 
   update(dt: number): CameraPose {
-    const d = Math.min(Math.max(dt, 0), WALK.dtMax)
+    const d = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), WALK.dtMax) : 0 // NaN 이 들어와도 멈춰 버리지 않게
     if (this.mode === 'walk') {
       const { colliders, bounds } = this
-      this.player = step(this.player, moveInput(this.keys, this.joy), d, (x, y) => collide({ x, y }, WALK.radius, colliders, bounds))
+      const m = moveInput(this.keys, this.joy)
+      this.player = step(this.player, { ...m, fx: m.fx * this.flip }, d, (x, y) => collide({ x, y }, WALK.radius, colliders, bounds))
       return walkPose(this.player)
     }
     // 조감 뷰: 도면 가운데를 도는 궤도 (참고 파일 r 75 · 높이 55 · 앞뒤 0.6 — 124 m 건물 기준을 도면 크기 비율로)

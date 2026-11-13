@@ -80,7 +80,7 @@ describe('체험 공간 화면', () => {
     expect(screen.getByRole('button', { name: '체험' })).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByText('나셀 공장', { selector: '.sub' })).toBeInTheDocument()
     expect(screen.getByTestId('factory-view')).toHaveAttribute('data-view', '3d')
-    expect(fake.setInteractive).toHaveBeenCalledWith(false)
+    await waitFor(() => expect(fake.setInteractive).toHaveBeenCalledWith(false))
     fireEvent.keyDown(window, { code: 'KeyM' }) // 입장 전에는 무시
     expect(fake.setGhostWalls).not.toHaveBeenCalledWith(true)
     const drv = await enter()
@@ -137,17 +137,32 @@ describe('체험 공간 화면', () => {
     fake.pickPlacement.mockImplementation(() => 11)
     show()
     const drv = await enter()
+    const stage = document.querySelector('.walk-stage')!
+    vi.spyOn(stage, 'getBoundingClientRect').mockReturnValue(DOMRect.fromRect({ x: 0, y: 40, width: 1024, height: 700 }))
     const frame = fake.onFrame.mock.calls.at(-1)![0] as () => void
-    act(() => {
-      for (let i = 0; i < 6; i++) frame()
-    })
+    const frames = () =>
+      act(() => {
+        for (let i = 0; i < 6; i++) frame()
+      })
+    // 커서가 무대 밖(위쪽 막대)이면 고르지 않고 이름표 없음
+    fireEvent.mouseMove(window, { clientX: 300, clientY: 20 })
+    frames()
+    expect(fake.pickPlacement).not.toHaveBeenCalled()
+    expect(screen.queryByRole('button', { name: /Box A/ })).toBeNull()
+    fireEvent.mouseMove(window, { clientX: 300, clientY: 200 })
+    frames()
+    expect(fake.pickPlacement).toHaveBeenLastCalledWith(300, 200, 18)
     expect(screen.getByRole('button', { name: /Box A/ })).toHaveTextContent('클릭 또는 E — 상세정보')
+    fireEvent.mouseMove(window, { clientX: 1100, clientY: 200 }) // 오른쪽 밖으로 나가면 지움
+    frames()
+    expect(screen.queryByRole('button', { name: /Box A/ })).toBeNull()
+    fireEvent.mouseMove(window, { clientX: 300, clientY: 200 })
+    frames()
     fireEvent.keyDown(window, { code: 'KeyE' })
     expect(screen.getByRole('complementary', { name: '상세정보' })).toHaveTextContent('실시간 상태 없음')
     fireEvent.keyDown(window, { code: 'KeyE' })
     expect(screen.queryByRole('complementary', { name: '상세정보' })).toBeNull()
     fake.pickPlacement.mockClear()
-    const stage = document.querySelector('.walk-stage')!
     fireEvent.mouseDown(stage, { button: 0, clientX: 100, clientY: 100 })
     fireEvent.mouseMove(window, { clientX: 200, clientY: 100 })
     fireEvent.mouseUp(window, { clientX: 200, clientY: 100 })

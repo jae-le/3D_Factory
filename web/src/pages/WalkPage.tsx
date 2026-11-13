@@ -127,7 +127,7 @@ export function WalkPage() {
     if (scene && detailId !== null) scene.frameOverview() // 시작 화면 뒤 3D 는 전체 보기
   }, [scene, detailId])
   useEffect(() => {
-    if (ctl && colliders && plan) ctl.setColliders(colliders, plan.bounds)
+    if (ctl && colliders && plan) ctl.setColliders(colliders, plan.bounds, plan.flip)
   }, [ctl, colliders, plan])
   // 입장 = 카메라 드라이버, 나가거나 화면을 떠나면 해제 (궤도 시점·OrbitControls 로 돌아감)
   useEffect(() => {
@@ -153,8 +153,10 @@ export function WalkPage() {
       const p = ctl.player
       setZone(zoneAt(zones, p.x, p.y)?.name ?? AISLE)
       const c = input.cursor.current
-      const id = ctl.mode === 'walk' && !input.dragging.current ? scene.pickPlacement(c.x, c.y, WALK.pickFar) : null
       const r = stage.current?.getBoundingClientRect()
+      // 커서가 무대 밖(상단 막대·상세 패널 너머 등)에 있으면 이름표를 띄우지 않음
+      const onStage = !!r && c.x >= r.left && c.x <= r.right && c.y >= r.top && c.y <= r.bottom
+      const id = onStage && ctl.mode === 'walk' && !input.dragging.current ? scene.pickPlacement(c.x, c.y, WALK.pickFar) : null
       const x = c.x - (r?.left ?? 0), y = c.y - (r?.top ?? 0) + 22
       const next = id === null ? null : { id, x, y: r?.height ? Math.min(y, r.height - 60) : y }
       setTip((t) => (t?.id === next?.id && t?.x === next?.x && t?.y === next?.y ? t : next))
@@ -220,7 +222,7 @@ export function WalkPage() {
     if (!plan || !colliders || drawingId === null) return
     let c = kept.current?.drawingId === drawingId ? kept.current.ctl : null
     if (!c) {
-      c = new WalkController(colliders, plan.bounds, findSpawn(colliders, plan.bounds))
+      c = new WalkController(colliders, plan.bounds, findSpawn(colliders, plan.bounds), plan.flip)
       kept.current = { drawingId, ctl: c }
     }
     c.setMode('walk')

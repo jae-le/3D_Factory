@@ -29,7 +29,7 @@ export function turn(p: Player, dx: number, dy: number, k: number): Player {
 
 /** 한 프레임 이동 (dt 최대 0.05초). 새 자리는 solve(충돌 처리)가 정함 */
 export function step(p: Player, input: MoveInput, dt: number, solve: (x: number, y: number) => { x: number; y: number }): Player {
-  const d = Math.min(Math.max(dt, 0), WALK.dtMax)
+  const d = Number.isFinite(dt) ? Math.min(Math.max(dt, 0), WALK.dtMax) : 0
   const len = Math.hypot(input.fx, input.fz)
   if (len <= 0.01) return p
   const sp = (input.run ? WALK.run : WALK.speed) * Math.min(len, 1)

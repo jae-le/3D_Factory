@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { planToWorld, type PlanFrame } from '../scene/coords'
+import type { CameraPose } from '../scene/walkLook'
 import type { Colliders } from './colliders'
 import { WalkController } from './controller'
 import { JOY_MAX, TouchSticks } from './touch'
@@ -72,6 +74,69 @@ describe('WalkController', () => {
     expect(c.toggleMode()).toBe('walk')
     c.keyUp('KeyW')
     expect(c.update(0.016).eye).toEqual({ x: 10, y: 10, h: 1.7 })
+  })
+})
+
+/** 월드(x, z)에서 카메라 앞 방향 · 오른쪽 방향 (three 카메라: 앞 (0,−1) 이면 오른쪽 (+1,0)) */
+function worldAxes(p: CameraPose, f: PlanFrame) {
+  const [ex, ez] = planToWorld(p.eye.x, p.eye.y, f), [lx, lz] = planToWorld(p.look.x, p.look.y, f)
+  const l = Math.hypot(lx - ex, lz - ez), fwd = [(lx - ex) / l, (lz - ez) / l]
+  return { at: [ex, ez], fwd, right: [-fwd[1], fwd[0]] }
+}
+const dot = (a: number[], b: number[]) => a[0] * b[0] + a[1] * b[1]
+
+describe('좌우 반전 도면 (plan.flip = −1)', () => {
+  for (const rotQ of [0, 1] as const) {
+    const f: PlanFrame = { bounds: B, rotQ, flip: -1 }
+
+    it(`D · 조이스틱 오른쪽 = 화면 오른쪽으로 걸음 (rotQ ${rotQ})`, () => {
+      for (const press of [(c: WalkController) => c.keyDown('KeyD'), (c: WalkController) => c.setJoy(1, 0)]) {
+        const c = new WalkController(NONE, B, { x: 10, y: 10 }, -1)
+        const a = worldAxes(c.update(0), f)
+        press(c)
+        const b = worldAxes(c.update(0.05), f)
+        const moved = [b.at[0] - a.at[0], b.at[1] - a.at[1]]
+        expect(dot(moved, a.right)).toBeCloseTo(0.26)
+        expect(dot(moved, a.fwd)).toBeCloseTo(0)
+      }
+    })
+
+    it(`오른쪽으로 끌면 (마우스·터치) 화면 오른쪽으로 돎, 걷는 방향·미니맵 방향도 같이 (rotQ ${rotQ})`, () => {
+      for (const touch of [false, true]) {
+        const c = new WalkController(NONE, B, { x: 10, y: 10 }, -1)
+        const a = worldAxes(c.update(0), f)
+        c.drag(100, 0, touch)
+        const b = worldAxes(c.update(0), f)
+        expect(dot(b.fwd, a.right)).toBeGreaterThan(0.4)
+        // 미니맵 화살표는 plan 의 (−sin yaw, cos yaw) 를 planToWorld 로 그림 → 카메라 앞과 같아야 함
+        const [ox, oz] = planToWorld(0, 0, f), [hx, hz] = planToWorld(-Math.sin(c.player.yaw), Math.cos(c.player.yaw), f)
+        expect(hx - ox).toBeCloseTo(b.fwd[0])
+        expect(hz - oz).toBeCloseTo(b.fwd[1])
+        c.keyDown('KeyW')
+        const w = worldAxes(c.update(0.05), f)
+        expect(dot([w.at[0] - b.at[0], w.at[1] - b.at[1]], b.fwd)).toBeCloseTo(0.26)
+      }
+    })
+  }
+
+  it('반전 안 된 도면 (flip 1) 은 그대로: D = 화면 오른쪽, setColliders 로 반전을 바꿀 수 있음', () => {
+    const c = new WalkController(NONE, B, { x: 10, y: 10 })
+    c.keyDown('KeyD')
+    expect(c.update(0.05).eye.x).toBeCloseTo(10.26)
+    c.setColliders(NONE, B, -1)
+    expect(c.update(0.05).eye.x).toBeCloseTo(10)
+  })
+})
+
+describe('dt 가 숫자가 아니면', () => {
+  it('그 프레임만 건너뛰고 다음 프레임에 다시 걸음', () => {
+    const c = new WalkController(NONE, B, { x: 10, y: 10 })
+    c.keyDown('KeyW')
+    const p = c.update(Number.NaN)
+    expect(p.eye).toEqual({ x: 10, y: 10, h: 1.7 })
+    expect(Number.isFinite(c.player.bobT)).toBe(true)
+    expect(c.update(Number.POSITIVE_INFINITY).eye.y).toBe(10)
+    expect(c.update(0.05).eye.y).toBeCloseTo(10.26)
   })
 })
 

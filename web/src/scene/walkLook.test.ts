@@ -4,7 +4,8 @@ import type { Plan } from '../drawing/plan/types'
 import { planToLocal } from './coords'
 import { createMaterials } from './materials'
 import { planToMeshes } from './planToMeshes'
-import { applyPose, ghostWalls, walkFog, worldOf } from './walkLook'
+import { WALK } from '../walk/player'
+import { applyPose, ghostWalls, walkFog, WALK_FOV, WALK_NEAR, worldOf } from './walkLook'
 
 const PLAN: Plan = {
   format: 1, unit: 'm', scale: 1, rotQ: 0, flip: 1, bounds: { w: 20, h: 10 },
@@ -28,12 +29,18 @@ describe('걷기 카메라', () => {
       return root.localToWorld(new THREE.Vector3(lx, h, lz))
     }
     expect(worldOf({ x: 3, y: 4, h: 2 }, f).distanceTo(at(3, 4, 2))).toBeLessThan(1e-9)
-    const cam = new THREE.PerspectiveCamera(70, 1, 0.05, 1000)
+    const cam = new THREE.PerspectiveCamera(WALK_FOV, 1, WALK_NEAR, 1000)
     applyPose(cam, { eye: { x: 10, y: 5, h: 1.7 }, look: { x: 10, y: 6, h: 1.7 } }, f)
     expect(cam.position.distanceTo(at(10, 5, 1.7))).toBeLessThan(1e-9)
     cam.updateMatrixWorld()
     const dir = cam.getWorldDirection(new THREE.Vector3())
     expect(dir.distanceTo(at(10, 6, 1.7).sub(at(10, 5, 1.7)).normalize())).toBeLessThan(1e-9)
+  })
+
+  it('가까운 면 0.1 m: 넓은 화면(21:9)에서도 모서리까지 몸 반지름 0.45 m 안 (벽에 붙어도 안 잘림)', () => {
+    expect(WALK_NEAR).toBe(0.1)
+    const hh = WALK_NEAR * Math.tan((WALK_FOV * Math.PI) / 360), hw = hh * (21 / 9)
+    expect(Math.hypot(WALK_NEAR, hh, hw)).toBeLessThan(WALK.radius)
   })
 
   it('조감 뷰: 외벽·가벽·걸레받이 재질 반투명 0.13 · 그림자 끔, 기둥 강재는 그대로, 끄면 원래대로', () => {

@@ -79,4 +79,13 @@ describe('얇은 벽', () => {
     expect(seen.length).toBe(3)
     for (const s of seen) expect(s).toBeLessThanOrEqual(0.2)
   })
+
+  it('dt 가 NaN·무한대면 그 프레임은 움직이지 않고 좌표가 NaN 이 되지 않음', () => {
+    for (const dt of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY]) {
+      const p = step(P0, keys('KeyW'), dt, free)
+      expect(p.x).toBe(10)
+      expect(Number.isFinite(p.y) && Number.isFinite(p.bobT)).toBe(true)
+      expect(step(p, keys('KeyW'), 0.05, free).y).toBeCloseTo(p.y + 0.26)
+    }
+  })
 })
