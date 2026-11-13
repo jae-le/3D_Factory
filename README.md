@@ -38,6 +38,11 @@ cd web && npm run dev               # http://localhost:5200 (화면, /api 는 80
 - 처음 실행하면 나셀 공장에 기본 공정 6개 · PJT 4개가 들어갑니다. 관리자 › 공정·생산 기준정보에서 고치면 상황판이 그 도면을 처음부터 다시 진행합니다.
 - 진행 속도는 `F3D_LIVE_TIME_SCALE` (기본 1 = 실제 시간, 화면 확인은 30).
 
+### 체험 공간
+- 레일 `체험`: 고른 도면의 3D 공간(벽·가벽·기둥·구역·배치 객체)을 1인칭으로 걷습니다. `입장하기` 후 W A S D·방향키 이동, 마우스 드래그 시점 회전, Shift 달리기, M 조감 뷰 ↔ 걷기, 설비 클릭 또는 E 상세정보, Esc 패널 닫기(패널이 없으면 시작 화면). 터치는 왼쪽 반 조이스틱 이동 · 오른쪽 반 시점.
+- 외벽·가벽·기둥·설비·자재(운반 제외)에 부딪히면 미끄러지듯 막힙니다. 시작 자리는 도면 가운데에 가장 가까운, 주변 1 m 가 빈 곳입니다.
+- 위 가운데에 지금 구역(없으면 `통로`), 오른쪽 아래 미니맵. 상세정보에는 모델·크기·위치와, 같은 이름의 공정이 있으면 상황판 실시간 상태(상태·PJT 호기·step·실적/목표)가 나옵니다.
+
 ## 배포 (jar 하나 + PostgreSQL)
 ```
 cd server && ./gradlew bootJar      # build/libs/factory3d.jar (화면 포함)
@@ -62,4 +67,5 @@ cd web && node e2e/p1-smoke.mjs http://localhost:8080 <처음 비밀번호> <새
 cd web && node e2e/p2-smoke.mjs http://localhost:8080 admin <비밀번호>   # 비밀번호 변경을 마친 계정으로: 3D·도면 보기·측정·도면 추가·도면 관리
 cd web && node e2e/p3-smoke.mjs http://localhost:8080 admin <비밀번호>   # P2 smoke 다음에: 객체 배치·편집·추가·관리
 cd web && node e2e/p4-smoke.mjs http://localhost:8080 admin <비밀번호>   # P3 smoke 다음에, 서버는 F3D_LIVE_TIME_SCALE=30 으로: 상황판·기준정보
+cd web && node e2e/walk-smoke.mjs http://localhost:8080 admin <비밀번호>   # P4 smoke 다음에: 체험 공간 입장·걷기·벽·상세·조감
 ```
