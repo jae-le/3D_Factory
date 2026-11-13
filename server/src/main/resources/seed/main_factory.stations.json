@@ -1,0 +1,40 @@
+{
+  "projects": [
+    { "name": "야월해상", "done": 3, "total": 13, "period": "'25.09~'27.03", "state": "run" },
+    { "name": "서남해상", "done": 7, "total": 13, "period": "'25.11~'26.06", "state": "run" },
+    { "name": "신안해상", "done": 2, "total": 13, "period": "'26.01~'26.09", "state": "run" },
+    { "name": "다대포", "done": 0, "total": 8, "period": "'26.05~'26.12", "state": "wait" }
+  ],
+  "stations": [
+    {
+      "name": "Hub 조립장", "placementName": "Hub 조립장", "project": "야월해상", "countsProject": false, "taktSec": 1200,
+      "startActual": 60, "startTarget": 68, "materials": ["Hub Casting", "Pitch Bearing"],
+      "steps": ["Hub Casting 세팅", "Pitch Bearing 장착", "Pitch Drive 장착", "Pitch Cabinet 설치", "Slip Ring 설치", "유압 배관", "Cable 포설", "Spinner Bracket 장착", "윤활 계통", "전장 결선", "기능 시험", "출하 검사"]
+    },
+    {
+      "name": "Main Station 3", "placementName": "Main Station 3", "project": "야월해상", "countsProject": true, "taktSec": 1200,
+      "startActual": 60, "startTarget": 66, "materials": ["Main Frame", "Nacelle Frame", "Gearbox"],
+      "steps": ["Bed Frame 세팅", "Main Shaft 장착", "Main Bearing 장착", "Gearbox 장착", "Generator 장착", "Converter Cooling Pump 조립", "Converter Cabinet 설치", "Yaw Drive 장착", "Cable 포설", "Nacelle Cover 장착", "기능 시험", "출하 검사"]
+    },
+    {
+      "name": "Main Station 2", "placementName": "Main Station 2", "project": "서남해상", "countsProject": true, "taktSec": 1200,
+      "startActual": 60, "startTarget": 88, "materials": ["Main Frame", "Nacelle Frame", "Gearbox"],
+      "steps": ["Bed Frame 세팅", "Main Shaft 장착", "Main Bearing 장착", "Gearbox 장착", "Generator 장착", "Converter Cooling Pump 조립", "Converter Cabinet 설치", "Yaw Drive 장착", "Cable 포설", "Nacelle Cover 장착", "기능 시험", "출하 검사"]
+    },
+    {
+      "name": "Main Station 1", "placementName": "Main Station 1", "project": "신안해상", "countsProject": true, "taktSec": 1200,
+      "startActual": 35, "startTarget": 52, "materials": ["Main Frame", "Nacelle Frame", "Gearbox"],
+      "steps": ["Bed Frame 세팅", "Main Shaft 장착", "Main Bearing 장착", "Gearbox 장착", "Generator 장착", "Converter Cooling Pump 조립", "Converter Cabinet 설치", "Yaw Drive 장착", "Cable 포설", "Nacelle Cover 장착", "기능 시험", "출하 검사"]
+    },
+    {
+      "name": "Sub_Main Frame 조립장", "placementName": "Sub_Main Frame 조립장", "project": "야월해상", "countsProject": false, "taktSec": 1200,
+      "startActual": 70, "startTarget": 74, "materials": ["Main Frame"],
+      "steps": ["Main Frame 세팅", "Main Frame 조립", "Bolt 체결", "Yaw Ring 장착", "Brake Caliper 장착", "Rear Frame 결합", "정렬 측정", "Bolt Tensioning", "배관 브래킷", "도장 보수", "치수 검사", "출하 검사"]
+    },
+    {
+      "name": "Sub_Yaw Bearing", "placementName": "Sub_Yaw Bearing", "project": "야월해상", "countsProject": false, "taktSec": 1200,
+      "startActual": 70, "startTarget": 74, "materials": ["Yaw Bearing"],
+      "steps": ["Yaw Bearing 세팅", "Bolt 삽입", "50% Bolt Tensioning", "75% Bolt Tensioning", "100% Bolt Tensioning", "Yaw Drive 장착", "Brake Disc 장착", "Grease 주입", "회전 시험", "토크 검사", "도장 보수", "출하 검사"]
+    }
+  ]
+}

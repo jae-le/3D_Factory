@@ -19,13 +19,16 @@ public class DrawingSeeder implements ApplicationRunner {
 
     private final com.kopens.factory3d.model.ModelSeeder modelSeeder;
     private final com.kopens.factory3d.placement.PlacementSeeder placementSeeder;
+    private final com.kopens.factory3d.station.StationSeeder stationSeeder;
 
     public DrawingSeeder(DrawingMapper drawings, DrawingService service, com.kopens.factory3d.model.ModelSeeder modelSeeder,
-            com.kopens.factory3d.placement.PlacementSeeder placementSeeder) {
+            com.kopens.factory3d.placement.PlacementSeeder placementSeeder,
+            com.kopens.factory3d.station.StationSeeder stationSeeder) {
         this.drawings = drawings;
         this.service = service;
         this.modelSeeder = modelSeeder;
         this.placementSeeder = placementSeeder;
+        this.stationSeeder = stationSeeder;
     }
 
     @Override
@@ -33,7 +36,7 @@ public class DrawingSeeder implements ApplicationRunner {
         seedAll();
     }
 
-    /** 시작 순서: 기본 모델 → 기본 도면 → 기본 배치. 단계별로 실패해도 다음 단계 시도 */
+    /** 시작 순서: 기본 모델 → 기본 도면 → 기본 배치 → 기본 공정. 단계별로 실패해도 다음 단계 시도 */
     public void seedAll() {
         try {
             modelSeeder.seedIfEmpty();
@@ -49,6 +52,11 @@ public class DrawingSeeder implements ApplicationRunner {
             placementSeeder.seedFactory();
         } catch (Exception e) {
             log.warn("기본 배치를 넣지 못했습니다: {}", e.getMessage());
+        }
+        try {
+            stationSeeder.seedFactory();
+        } catch (Exception e) {
+            log.warn("기본 공정을 넣지 못했습니다: {}", e.getMessage());
         }
     }
 
