@@ -9,6 +9,7 @@ import { useDrawing } from '../drawing/useDrawing'
 import { loadStored, pickDrawing, saveStored, useDrawings } from '../drawing/useDrawings'
 import { AppShell } from '../layout/AppShell'
 import { DrawingBar } from '../layout/DrawingBar'
+import { OBJECTS_PANEL_KEY } from '../layout/IconRail'
 import { modelFileUrl } from '../objects/api'
 import { AddModelDialog } from '../objects/AddModelDialog'
 import { EditTag } from '../objects/EditTag'
@@ -72,6 +73,21 @@ export function FactoryPage() {
   const [placing, setPlacing] = useState<ModelInfo | null>(null)
   const [dragPos, setDragPos] = useState<DragPos | null>(null)
   const [toolOn, setToolOn] = useState(false)
+  const [panelOpen, setPanelOpen] = useState(() => {
+    try {
+      return localStorage.getItem(OBJECTS_PANEL_KEY) !== '0'
+    } catch {
+      return true
+    }
+  })
+  const togglePanel = () => {
+    setPanelOpen(!panelOpen)
+    try {
+      localStorage.setItem(OBJECTS_PANEL_KEY, panelOpen ? '0' : '1')
+    } catch {
+      /* 저장 못 해도 동작 */
+    }
+  }
   const pendingNames = useRef(new Set<string>()) // 놓기 요청 중인 이름 — 빠른 연속 놓기에도 이름이 겹치지 않게
   // 도면이 바뀌면 선택·편집·배치 모드를 끝냄 (렌더 중 조정)
   const [objDrawing, setObjDrawing] = useState(detail?.id ?? null)
@@ -276,6 +292,7 @@ export function FactoryPage() {
   )
   const side = detail && drawings.kind === 'ok' && list.length > 0 && (
     <ObjectPanel
+      open={panelOpen}
       models={modelList}
       placements={rows}
       canEdit={canEdit}
@@ -287,7 +304,7 @@ export function FactoryPage() {
     />
   )
   return (
-    <AppShell active="factory" head={head} side={side}>
+    <AppShell active="factory" head={head} side={side} panel={{ objectsOpen: panelOpen && !!side, onObjects: togglePanel }}>
       {drawings.kind === 'loading' ? (
         <p className="empty-state" role="status">도면 목록 불러오는 중…</p>
       ) : list.length === 0 ? (

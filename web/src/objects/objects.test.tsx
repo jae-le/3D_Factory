@@ -15,7 +15,7 @@ const placements: Placement[] = [
 ]
 
 function panel(over: Partial<Parameters<typeof ObjectPanel>[0]> = {}) {
-  const props = { models, placements, canEdit: true, selectedId: null, placingModelId: null, onPickModel: vi.fn(), onSelect: vi.fn(), onAddModel: vi.fn(), ...over }
+  const props = { open: true, models, placements, canEdit: true, selectedId: null, placingModelId: null, onPickModel: vi.fn(), onSelect: vi.fn(), onAddModel: vi.fn(), ...over }
   render(<ObjectPanel {...props} />)
   return props
 }
