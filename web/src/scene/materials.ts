@@ -15,7 +15,7 @@ export interface Materials {
 /** 공유 재질 (demo MAT 의 도면 부분). tex 가 없으면(테스트) 색만 */
 export function createMaterials(tex?: Textures): Materials {
   const m: Materials = {
-    ground3d: new THREE.MeshStandardMaterial({ map: tex?.concrete ?? null, color: tex ? 0xa3a8ae : 0xb9bcbf, roughness: 0.85, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
+    ground3d: new THREE.MeshStandardMaterial({ map: tex?.concrete ?? null, color: tex ? 0xeeeeec : 0xb9bcbf, roughness: 0.85, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
     groundPlan: new THREE.MeshStandardMaterial({ color: 0x1a1d22, roughness: 1, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }),
     panel: new THREE.MeshStandardMaterial({ map: tex?.panel ?? null, color: tex ? 0xe6e9ed : 0xdfe2e6, roughness: 0.55, metalness: 0.2 }),
     drywall: new THREE.MeshStandardMaterial({ color: 0xeceef0, roughness: 0.9 }),

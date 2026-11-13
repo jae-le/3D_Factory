@@ -36,7 +36,7 @@ export interface ObjectHost {
 const SNAP_PX = 12
 const MARK_COLOR = 0xff5a1f // 측정 점·선: 밝은 바닥·어두운 도면 양쪽에서 잘 보이는 주황
 const MARK_Y = 0.06
-const BG_3D = 0xc3cad2
+const BG_3D = 0xdcdfe3
 const BG_PLAN = 0x0e1013
 
 /** 그리드 칸 간격 (demo niceStep) */
