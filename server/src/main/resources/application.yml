@@ -40,3 +40,4 @@ factory3d:
   live:
     enabled: ${F3D_LIVE_ENABLED:true}          # 가상 MES 1초 진행 (테스트는 끔 — advance 를 직접 부름)
     time-scale: ${F3D_LIVE_TIME_SCALE:1}       # 진행 속도 배율 (1 = 실제 시간, 화면 확인은 30)
+    allowed-origins: ${F3D_LIVE_ORIGINS:http://localhost:5200} # 같은 출처는 항상 허용, 개발 서버(vite) 추가

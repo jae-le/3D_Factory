@@ -132,13 +132,29 @@ public class VirtualMes implements ProductionSource {
 
     @Override
     public void subscribe(long drawingId, LiveListener listener) {
-        listeners.computeIfAbsent(drawingId, k -> new CopyOnWriteArrayList<>()).add(listener);
+        listeners.compute(drawingId, (k, list) -> {
+            List<LiveListener> l = list == null ? new CopyOnWriteArrayList<>() : list;
+            l.add(listener);
+            return l;
+        });
     }
 
+    /** 구독과 snapshot 을 deliverLock 안에서 한 번에: 그 사이 진행분이 빠지거나 겹치지 않음 (받는 쪽은 이 snapshot 을 먼저 보냄) */
+    @Override
+    public LiveMessages.Snapshot subscribeWithSnapshot(long drawingId, LiveListener listener) {
+        synchronized (deliverLock) {
+            subscribe(drawingId, listener);
+            return snapshot(drawingId);
+        }
+    }
+
+    /** 구독 해제. 도면의 구독자가 모두 빠지면 목록도 지움 */
     @Override
     public void unsubscribe(long drawingId, LiveListener listener) {
-        List<LiveListener> list = listeners.get(drawingId);
-        if (list != null) list.remove(listener);
+        listeners.computeIfPresent(drawingId, (k, list) -> {
+            list.remove(listener);
+            return list.isEmpty() ? null : list;
+        });
     }
 
     @Override
@@ -227,6 +243,11 @@ public class VirtualMes implements ProductionSource {
         boards.clear();
         listeners.clear();
         lastTick = -1;
+    }
+
+    /** 구독자 목록이 남아 있는지 (모두 빠지면 목록도 지워져야 함) */
+    boolean hasListeners(long drawingId) {
+        return listeners.containsKey(drawingId);
     }
 
     synchronized Set<Long> loaded() {

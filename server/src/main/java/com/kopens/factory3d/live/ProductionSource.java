@@ -7,6 +7,9 @@ public interface ProductionSource {
 
     void subscribe(long drawingId, LiveListener listener);
 
+    /** 구독하고 그 시점의 snapshot 을 돌려줌. 둘 사이에 전달되는 메시지가 없게 한 번에 (WebSocket 은 이걸로 붙음) */
+    LiveMessages.Snapshot subscribeWithSnapshot(long drawingId, LiveListener listener);
+
     void unsubscribe(long drawingId, LiveListener listener);
 
     /** 기준정보를 다시 읽어 처음부터 진행하고 구독자에게 새 snapshot */

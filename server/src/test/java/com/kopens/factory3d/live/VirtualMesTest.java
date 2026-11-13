@@ -155,6 +155,42 @@ class VirtualMesTest extends IntegrationTest {
     }
 
     @Test
+    void 구독과_snapshot_은_한_번에_진행분이_빠지거나_겹치지_않음() throws Exception {
+        mes.override(drawing, station, 0, 0, 0); // 실적은 그대로, 목표만 1초에 +1
+        List<LiveMessages.Snapshot> snaps = new CopyOnWriteArrayList<>();
+        List<List<Object>> received = new CopyOnWriteArrayList<>();
+        Thread runner = new Thread(() -> {
+            for (int i = 0; i < 80; i++) mes.advance(1);
+        });
+        runner.start();
+        while (runner.isAlive()) {
+            List<Object> mine = new CopyOnWriteArrayList<>();
+            received.add(mine);
+            snaps.add(mes.subscribeWithSnapshot(drawing, mine::add));
+            Thread.onSpinWait();
+        }
+        runner.join();
+        for (int i = 0; i < snaps.size(); i++) {
+            var tick = received.get(i).stream().filter(m -> m instanceof LiveMessages.Tick).map(m -> (LiveMessages.Tick) m).findFirst();
+            if (tick.isEmpty()) continue; // 마지막 진행 뒤에 붙음
+            assertThat(tick.get().stations().get(0).target()).isEqualTo(snaps.get(i).stations().get(0).target() + 1);
+        }
+    }
+
+    @Test
+    void 구독자가_모두_빠지면_목록도_지움() {
+        long other = drawing + 1000;
+        LiveListener a = m -> {}, b = m -> {};
+        mes.subscribe(other, a);
+        assertThat(mes.subscribeWithSnapshot(other, b).stations()).isEmpty(); // 공정 없는 도면 = 빈 snapshot
+        mes.unsubscribe(other, a);
+        assertThat(mes.hasListeners(other)).isTrue();
+        mes.unsubscribe(other, b);
+        assertThat(mes.hasListeners(other)).isFalse();
+        mes.unsubscribe(other, b); // 없어도 그냥 지나감
+    }
+
+    @Test
     void 다시_읽으면_처음부터_새_snapshot() {
         mes.override(drawing, station, 99, 99, 1);
         mes.reload(drawing);

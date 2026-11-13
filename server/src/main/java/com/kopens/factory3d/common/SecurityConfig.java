@@ -74,6 +74,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/stations/**", "/api/projects/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/**").hasRole("VIEWER")
                         .requestMatchers("/api/**").hasRole("OPERATOR")
+                        .requestMatchers("/ws/**").hasRole("VIEWER") // 상황판 WebSocket: 조회 이상 (비밀번호 변경 전 세션은 403)
                         .requestMatchers("/v3/**", "/swagger-ui/**", "/swagger-ui.html").hasRole("ADMIN")
                         .anyRequest().permitAll())
                 .csrf(c -> c.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
