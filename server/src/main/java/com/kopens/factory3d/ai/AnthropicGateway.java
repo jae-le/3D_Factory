@@ -77,17 +77,18 @@ public class AnthropicGateway implements ClaudeGateway {
         SdkTranscript tr = (SdkTranscript) t;
         MessageCreateParams params = params(call, tr.messages);
         BetaMessageAccumulator acc = BetaMessageAccumulator.create();
+        Turn turn;
         try (StreamResponse<BetaRawMessageStreamEvent> s = client(call.apiKey()).beta().messages().createStreaming(params)) {
             s.stream().peek(acc::accumulate)
                     .flatMap(e -> e.contentBlockDelta().stream())
                     .flatMap(d -> d.delta().text().stream())
                     .forEach(d -> onText.accept(d.text()));
+            BetaMessage msg = acc.message(); // 끊긴 스트림이면 여기서 예외 → 아래에서 번역
+            turn = read(msg);
+            append(tr, msg);
         } catch (RuntimeException e) {
             throw translate(e);
         }
-        BetaMessage msg = acc.message();
-        Turn turn = read(msg);
-        tr.messages.add(BetaMessageParam.ofAssistantOfContentBlockParams(replayBlocks(msg.content())));
         return turn;
     }
 
@@ -156,11 +157,12 @@ public class AnthropicGateway implements ClaudeGateway {
         if (BetaStopReason.REFUSAL.equals(stop)) return new Turn(Stop.REFUSAL, List.of(), "", refusalReason(msg), usage);
         List<BetaContentBlock> content = msg.content();
         int from = lastFallback(content) + 1; // fallback 뒤 블록만 이번 답
+        boolean toolStop = BetaStopReason.TOOL_USE.equals(stop); // 다른 이유로 멈췄으면 (끊긴) 도구 호출은 무시
         StringBuilder text = new StringBuilder();
         List<ToolCall> calls = new ArrayList<>();
         for (BetaContentBlock b : content.subList(from, content.size())) {
             b.text().ifPresent(x -> text.append(x.text()));
-            b.toolUse().ifPresent(u -> calls.add(new ToolCall(u.id(), u.name(), json(u._input()))));
+            if (toolStop) b.toolUse().ifPresent(u -> calls.add(new ToolCall(u.id(), u.name(), json(u._input()))));
         }
         Stop s = stop == null ? Stop.OTHER
                 : BetaStopReason.TOOL_USE.equals(stop) ? Stop.TOOL_USE
@@ -171,11 +173,27 @@ public class AnthropicGateway implements ClaudeGateway {
 
     /** 다음 요청에 붙일 content (그대로, 생각 블록 포함). 단 중간 fallback 이면 마지막 fallback 앞의 thinking·redacted_thinking·tool_use 는 뺌 */
     static List<BetaContentBlockParam> replayBlocks(List<BetaContentBlock> content) {
+        return replayBlocks(content, true);
+    }
+
+    /** 응답 메시지용: stop_reason 이 tool_use 가 아니면 tool_use 블록도 뺌 (결과를 줄 수 없으므로) */
+    static List<BetaContentBlockParam> replayBlocks(BetaMessage msg) {
+        return replayBlocks(msg.content(), msg.stopReason().filter(BetaStopReason.TOOL_USE::equals).isPresent());
+    }
+
+    /** 빈 content 의 assistant 메시지는 API 가 거부하므로 붙이지 않음 */
+    static void append(SdkTranscript tr, BetaMessage msg) {
+        List<BetaContentBlockParam> blocks = replayBlocks(msg);
+        if (!blocks.isEmpty()) tr.messages.add(BetaMessageParam.ofAssistantOfContentBlockParams(blocks));
+    }
+
+    private static List<BetaContentBlockParam> replayBlocks(List<BetaContentBlock> content, boolean keepToolUse) {
         int last = lastFallback(content);
         List<BetaContentBlockParam> out = new ArrayList<>();
         for (int i = 0; i < content.size(); i++) {
             BetaContentBlock b = content.get(i);
             if (i < last && (b.isThinking() || b.isRedactedThinking() || b.isToolUse())) continue;
+            if (!keepToolUse && b.isToolUse()) continue;
             out.add(b.toParam());
         }
         return out;

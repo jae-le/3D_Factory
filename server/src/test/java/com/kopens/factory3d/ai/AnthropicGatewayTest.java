@@ -99,4 +99,36 @@ class AnthropicGatewayTest {
         assertThat(new AiCallException(AiCallException.Kind.OTHER, "HTTP 400", null).getMessage())
                 .isEqualTo("Claude 호출에 실패했습니다 (HTTP 400)");
     }
+
+    @Test
+    void 빈_응답은_assistant_메시지로_붙이지_않음() throws Exception {
+        BetaMessage m = SDK.readValue("""
+                {"id":"msg_4","type":"message","role":"assistant","model":"claude-opus-5-5","stop_reason":"refusal",
+                 "stop_sequence":null,"stop_details":{"type":"refusal","category":"cyber","explanation":"x"},
+                 "content":[],"usage":{"input_tokens":5,"output_tokens":0}}
+                """, BetaMessage.class);
+        assertThat(AnthropicGateway.replayBlocks(m)).isEmpty();
+        AnthropicGateway.SdkTranscript tr = new AnthropicGateway.SdkTranscript();
+        tr.addUserText("안녕");
+        AnthropicGateway.append(tr, m);
+        assertThat(tr.messages()).isEqualTo(1);
+    }
+
+    @Test
+    void max_tokens_로_끊긴_도구_호출은_무시하고_붙이지_않음() throws Exception {
+        BetaMessage m = SDK.readValue("""
+                {"id":"msg_5","type":"message","role":"assistant","model":"claude-opus-5-5","stop_reason":"max_tokens",
+                 "stop_sequence":null,
+                 "content":[{"type":"text","text":"음"},{"type":"tool_use","id":"tu_cut","name":"get_scene","input":{}}],
+                 "usage":{"input_tokens":5,"output_tokens":1}}
+                """, BetaMessage.class);
+        Turn t = AnthropicGateway.read(m);
+        assertThat(t.stop()).isEqualTo(Stop.MAX_TOKENS);
+        assertThat(t.toolCalls()).isEmpty();
+        assertThat(AnthropicGateway.replayBlocks(m)).hasSize(1);
+        AnthropicGateway.SdkTranscript tr = new AnthropicGateway.SdkTranscript();
+        tr.addUserText("안녕");
+        AnthropicGateway.append(tr, m);
+        assertThat(tr.messages()).isEqualTo(2);
+    }
 }
