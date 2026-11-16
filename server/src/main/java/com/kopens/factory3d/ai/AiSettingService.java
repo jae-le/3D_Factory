@@ -90,7 +90,11 @@ public class AiSettingService {
         AiSettingMapper.Row r = row();
         if (!crypto.available()) throw new BadRequestException(KeyCrypto.NO_MASTER);
         if (r.apiKeyEnc == null) throw new BadRequestException("Claude API 키가 등록되지 않았습니다.");
-        return new Active(crypto.decrypt(r.apiKeyEnc), r.model);
+        try {
+            return new Active(crypto.decrypt(r.apiKeyEnc), r.model);
+        } catch (IllegalStateException e) {
+            throw new BadRequestException("저장된 API 키를 풀지 못했습니다. 마스터 키가 바뀌었다면 키를 다시 등록하세요.");
+        }
     }
 
     /** 챗봇을 막는 이유 (null = 쓸 수 있음). 순서: 마스터 키 → 키 → 사용 여부 → 월 한도 */

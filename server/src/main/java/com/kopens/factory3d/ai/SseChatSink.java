@@ -41,6 +41,11 @@ final class SseChatSink implements ChatSink {
         complete();
     }
 
+    @Override
+    public boolean closed() {
+        return closed;
+    }
+
     private void send(String name, Object data) {
         if (closed) return;
         try {

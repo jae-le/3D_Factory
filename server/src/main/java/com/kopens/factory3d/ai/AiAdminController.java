@@ -1,6 +1,8 @@
 package com.kopens.factory3d.ai;
 
 import java.time.LocalDate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -9,6 +11,8 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/admin/ai")
 public class AiAdminController {
+    private static final Logger log = LoggerFactory.getLogger(AiAdminController.class);
+
     public record KeyBody(String apiKey) {}
 
     public record TestResult(boolean ok, String model, Long latencyMs, String message) {}
@@ -40,6 +44,7 @@ public class AiAdminController {
             usage.record(auth.getName(), null, u.model(), u.input(), u.output(), u.cacheRead(), u.cacheWrite(), "test");
             return new TestResult(true, p.model(), p.latencyMs(), null);
         } catch (AiCallException e) {
+            log.warn("Claude 호출 실패 kind={} model={}", e.kind(), a.model(), e.getCause());
             return new TestResult(false, a.model(), null, e.getMessage());
         }
     }

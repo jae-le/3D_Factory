@@ -23,7 +23,7 @@ class ChatApiTest extends AiTestBase {
     @Autowired ChatService chat;
     @Autowired ProposalStore store;
 
-    static final class Rec implements ChatSink {
+    static class Rec implements ChatSink {
         final List<String> events = new ArrayList<>();
         final StringBuilder text = new StringBuilder();
         final List<String> tools = new ArrayList<>();
@@ -61,6 +61,46 @@ class ChatApiTest extends AiTestBase {
         Rec r = new Rec();
         chat.chat("kim", drawing, message, r);
         return r;
+    }
+
+    /** 첫 도구 이벤트 뒤에 떠나는(또는 대화를 초기화하는) 받는 쪽 */
+    final class Leaving extends Rec {
+        boolean closed;
+        final Runnable onFirstTool;
+
+        Leaving(Runnable onFirstTool) {
+            this.onFirstTool = onFirstTool;
+        }
+
+        @Override
+        public void tool(String name, String label) {
+            super.tool(name, label);
+            if (tools.size() == 1) onFirstTool.run();
+        }
+
+        @Override
+        public boolean closed() {
+            return closed;
+        }
+    }
+
+    @Test
+    void 받는_쪽이_떠나면_Claude_호출을_멈춤() {
+        enableAi();
+        Leaving[] l = new Leaving[1];
+        l[0] = new Leaving(() -> l[0].closed = true);
+        chat.chat("kim", drawing, MOVE, l[0]);
+        assertThat(jdbc.queryForObject("select count(*) from ai_usage where purpose = 'chat'", Integer.class)).isEqualTo(1);
+        assertThat(l[0].events).doesNotContain("done", "error", "proposal");
+    }
+
+    @Test
+    void 대화가_초기화되면_Claude_호출을_멈춤() {
+        enableAi();
+        Leaving l = new Leaving(() -> store.reset("kim", drawing));
+        chat.chat("kim", drawing, MOVE, l);
+        assertThat(jdbc.queryForObject("select count(*) from ai_usage where purpose = 'chat'", Integer.class)).isEqualTo(1);
+        assertThat(l.events).doesNotContain("done", "error");
     }
 
     @Test

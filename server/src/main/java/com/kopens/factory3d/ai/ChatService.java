@@ -47,6 +47,7 @@ public class ChatService {
     }
 
     public void chat(String user, long drawingId, String message, ChatSink sink) {
+        String[] model = {null};
         try {
             AiSettingService.Status st = settings.status();
             if (!st.enabled()) {
@@ -54,6 +55,7 @@ public class ChatService {
                 return;
             }
             AiSettingService.Active key = settings.requireKey();
+            model[0] = key.model();
             DrawingDetail d = drawings.findById(drawingId);
             if (d == null) {
                 sink.error("도면을 찾을 수 없습니다.");
@@ -74,7 +76,10 @@ public class ChatService {
             } finally {
                 c.lock.unlock();
             }
-        } catch (AiCallException | BadRequestException e) {
+        } catch (AiCallException e) {
+            log.warn("Claude 호출 실패 kind={} model={}", e.kind(), model[0], e.getCause());
+            sink.error(e.getMessage());
+        } catch (BadRequestException e) {
             sink.error(e.getMessage());
         } catch (RuntimeException e) {
             log.error("AI 챗봇 처리 중 오류", e);
@@ -98,6 +103,9 @@ public class ChatService {
         int calls = 0;
         try {
             while (true) {
+                if (sink.closed() || !store.isCurrent(c)) { // 떠났거나 대화가 초기화됨 → 조용히 멈춤
+                    return;
+                }
                 Turn t = gateway.next(call, c.transcript, sink::text);
                 var u = t.usage();
                 cost = cost.add(usage.record(user, d.id(), u.model(), u.input(), u.output(), u.cacheRead(), u.cacheWrite(), "chat"));

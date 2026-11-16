@@ -40,6 +40,14 @@ class AiSettingApiTest extends IntegrationTest {
     }
 
     @Test
+    void 마스터_키가_바뀌어_못_풀면_400_안내() throws Exception {
+        putJson("/api/admin/ai/key", "{\"apiKey\":\"" + KEY + "\"}", ADMIN).andExpect(status().isOk());
+        jdbc.update("update ai_setting set api_key_enc = decode('00112233445566778899aabbccddeeff0011', 'hex')");
+        mvc.perform(post("/api/admin/ai/test").with(ADMIN).with(csrf())).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("저장된 API 키를 풀지 못했습니다. 마스터 키가 바뀌었다면 키를 다시 등록하세요."));
+    }
+
+    @Test
     void 키는_암호화해_저장하고_힌트만_보임() throws Exception {
         putJson("/api/admin/ai/key", "{\"apiKey\":\"short\"}", ADMIN).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("API 키 형식이 올바르지 않습니다."));

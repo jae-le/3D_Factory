@@ -11,4 +11,9 @@ public interface ChatSink {
     void done(ChatService.Done done);
 
     void error(String message);
+
+    /** 받는 쪽이 떠났으면 true (Claude 호출을 더 하지 않음) */
+    default boolean closed() {
+        return false;
+    }
 }

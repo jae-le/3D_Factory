@@ -73,6 +73,11 @@ public class ProposalStore {
         map.remove(key(user, drawingId));
     }
 
+    /** 이 대화가 아직 저장소에 그대로 있는지 (초기화·만료로 바뀌었으면 false) */
+    public boolean isCurrent(Conversation c) {
+        return map.get(key(c.user, c.drawingId)) == c;
+    }
+
     public Optional<Conversation> byChangeset(String user, String batchId) {
         purge();
         return map.values().stream().filter(c -> c.user.equals(user) && c.changeset.id().equals(batchId)).findFirst();
