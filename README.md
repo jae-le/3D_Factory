@@ -43,6 +43,12 @@ cd web && npm run dev               # http://localhost:5200 (화면, /api 는 80
 - 외벽·가벽·기둥·설비·자재(운반 제외)에 부딪히면 미끄러지듯 막힙니다. 시작 자리는 도면 가운데에 가장 가까운, 주변 1 m 가 빈 곳입니다.
 - 위 가운데에 지금 구역(없으면 `통로`), 오른쪽 아래 미니맵. 상세정보에는 모델·크기·위치와, 같은 이름의 공정이 있으면 상황판 실시간 상태(상태·PJT 호기·step·실적/목표)가 나옵니다.
 
+### AI 챗봇
+- 레일 `AI 챗봇`(운전원 이상): 3D 공장 화면 옆에 챗봇 패널이 열립니다 (객체 패널 자리, 한 번에 하나). 한국어로 요청하면(예: `Main Station 1 을 오른쪽으로 2m 옮겨줘`) Claude 가 장면을 확인하고 **변경 제안**만 만듭니다 — 3D 에 반투명 유령(옮김 파랑 · 추가 초록 · 삭제 빨강 · 가벽 주황)으로 미리 보고 `적용` 을 눌러야 저장됩니다. 적용한 묶음은 카드의 `되돌리기` 나 관리자 › 변경 이력에서 되돌릴 수 있습니다.
+- 할 수 있는 일: 객체 이동·회전·추가·삭제·이름 바꾸기, 가벽 추가·삭제, 구역 이름 바꾸기, 공정 택타임·주의/지연 기준(적용은 관리자만).
+- 관리자 › `Claude API 관리`: API 키 등록(서버에 AES-GCM 암호화 저장, 화면엔 끝 4자리만) · 연결 테스트 · 모델(Opus 5.5 기본 · Sonnet 5.5 · Haiku 5.5) · 월 한도(USD, 넘으면 챗봇 멈춤) · 사용 여부. `변경 이력`: 사람·AI 가 바꾼 기록과 묶음 되돌리기. `AI 사용량`: 이번 달 합계·일별·사용자별.
+- 키를 저장하려면 서버에 마스터 키 `F3D_AI_MASTER_KEY`(base64 32바이트)가 있어야 합니다. 만들기: `openssl rand -base64 32` (또는 PowerShell `[Convert]::ToBase64String((1..32 | % { Get-Random -Max 256 }))`). 마스터 키를 바꾸면 저장된 API 키를 다시 등록해야 합니다.
+
 ## 배포 (jar 하나 + PostgreSQL)
 ```
 cd server && ./gradlew bootJar      # build/libs/factory3d.jar (화면 포함)
@@ -58,6 +64,8 @@ java -jar build/libs/factory3d.jar  # Java 21 필요
 | `F3D_ADMIN_PASSWORD` | 비면 임의 생성 |
 | `F3D_LIVE_TIME_SCALE` | `1` (상황판 진행 배율) |
 | `F3D_LIVE_ORIGINS` | `http://localhost:5200` (WebSocket 허용 출처, 같은 출처는 항상 허용) |
+| `F3D_AI_MASTER_KEY` | 없음 (Claude API 키 암호화용 base64 32바이트. 없으면 키 등록 불가) |
+| `F3D_AI_FAKE` | `false` (`true` = 실제 Claude 대신 정해 둔 대본 — 테스트·화면 확인용) |
 
 ## 테스트
 ```
@@ -68,4 +76,5 @@ cd web && node e2e/p2-smoke.mjs http://localhost:8080 admin <비밀번호>   # �
 cd web && node e2e/p3-smoke.mjs http://localhost:8080 admin <비밀번호>   # P2 smoke 다음에: 객체 배치·편집·추가·관리
 cd web && node e2e/p4-smoke.mjs http://localhost:8080 admin <비밀번호>   # P3 smoke 다음에, 서버는 F3D_LIVE_TIME_SCALE=30 으로: 상황판·기준정보
 cd web && node e2e/walk-smoke.mjs http://localhost:8080 admin <비밀번호>   # P4 smoke 다음에: 체험 공간 입장·걷기·벽·상세·조감
+cd web && node e2e/p6-smoke.mjs http://localhost:8080 admin <비밀번호>   # walk smoke 다음에, 서버는 F3D_AI_FAKE=true · F3D_AI_MASTER_KEY 로: AI 챗봇 제안·미리보기·적용·변경 이력 되돌리기·사용량
 ```
