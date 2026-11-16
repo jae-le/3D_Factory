@@ -6,9 +6,11 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js'
 import { GTAOPass } from 'three/addons/postprocessing/GTAOPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js'
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js'
+import type { Preview } from '../ai/preview'
 import type { Plan, Pt } from '../drawing/plan/types'
 import { cellSize, rectOf, snapToCells } from '../objects/grid'
 import { localToPlan, planToLocal, worldToPlan } from './coords'
+import { PreviewLayer } from './previewLayer'
 import { overviewPose, toScreen, type ScreenPoint } from './dashView'
 import { createMaterials, type Materials } from './materials'
 import { disposeCache, loadModel } from './modelCache'
@@ -53,7 +55,13 @@ export interface WalkHost {
   worldOfPlan(x: number, y: number, h: number): THREE.Vector3
   planOfWorld(v: THREE.Vector3): { x: number; y: number }
 }
-export type SceneHost = PickSource & ObjectHost & DashHost & WalkHost
+/** AI 제안 3D 미리보기 (챗봇 패널이 부름) */
+export interface PreviewHost {
+  setPreview(p: Preview | null): void
+  highlightPreview(seq: number | null): void
+  focusPoint(x: number, y: number): void
+}
+export type SceneHost = PickSource & ObjectHost & DashHost & WalkHost & PreviewHost
 
 const SNAP_PX = 12
 const MARK_COLOR = 0xff5a1f // 측정 점·선: 밝은 바닥·어두운 도면 양쪽에서 잘 보이는 주황
@@ -80,7 +88,7 @@ function disposeGroup(g: THREE.Object3D) {
 }
 
 /** 3D 공장 화면. React 는 setPlan·setView·setQuality·도구 콜백만 부른다 */
-export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost {
+export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost, PreviewHost {
   private container: HTMLElement
   private renderer: THREE.WebGLRenderer
   private scene = new THREE.Scene()
@@ -103,6 +111,8 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost 
   private objectLayer: ObjectLayer
   private ringGroup = new THREE.Group() // 상황판 바닥 링 (root 아래)
   private rings: RingLayer
+  private previewGroup = new THREE.Group() // AI 제안 미리보기 (root 아래)
+  private preview: PreviewLayer
   private frameCb: ((project: ScreenProject) => void) | null = null
   private interactive = true // false = 상황판 (선택·끌기·배치 없음)
   private driver: CameraDriver | null = null // 체험 공간 걷기·조감 (있으면 OrbitControls·Navigator 멈춤)
@@ -179,9 +189,10 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost 
     this.ground.position.y = -0.01
     this.ground.receiveShadow = true
     this.scene.add(this.ground, this.root)
-    this.root.add(this.overlay, this.objects, this.ringGroup)
+    this.root.add(this.overlay, this.objects, this.ringGroup, this.previewGroup)
     this.objectLayer = new ObjectLayer(this.objects, loadModel)
     this.rings = new RingLayer(this.ringGroup)
+    this.preview = new PreviewLayer(this.previewGroup)
 
     this.nav = new Navigator(this.camera, controls, renderer.domElement)
     const dom = renderer.domElement
@@ -218,10 +229,12 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost 
       this.clearOverlay()
       this.objectLayer.setObjects([])
       this.rings.setRings([])
+      this.preview.set(null)
       return
     }
     this.objectLayer.setBounds(plan.bounds)
     this.rings.setBounds(plan.bounds)
+    this.preview.setBounds(plan.bounds)
     this.meshes = planToMeshes(plan, this.mats, { labels: true })
     this.root.add(this.meshes.group)
     if (this.ghost) ghostWalls(this.mats, this.meshes.group, true)
@@ -309,6 +322,19 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost 
 
   setRings(rings: RingSpec[]): void {
     this.rings.setRings(rings)
+  }
+
+  setPreview(p: Preview | null): void {
+    this.preview.set(p)
+  }
+
+  highlightPreview(seq: number | null): void {
+    this.preview.highlight(seq)
+  }
+
+  /** plan 좌표 한 점으로 카메라 이동 (제안 항목 클릭) */
+  focusPoint(x: number, y: number): void {
+    if (this.plan) this.nav.focusOn(this.worldOfPlan(x, y, 0), 12)
   }
 
   onFrame(cb: ((project: ScreenProject) => void) | null): void {
@@ -409,6 +435,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost 
     this.drag = null
     this.setPlan(null)
     this.rings.dispose()
+    this.preview.dispose()
     this.objectLayer.dispose()
     disposeCache()
     this.markMat.dispose()
