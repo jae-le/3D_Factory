@@ -1,5 +1,7 @@
 package com.kopens.factory3d.ai;
 
+import java.time.LocalDate;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -9,10 +11,37 @@ import org.springframework.web.bind.annotation.*;
 public class AiAdminController {
     public record KeyBody(String apiKey) {}
 
-    private final AiSettingService settings;
+    public record TestResult(boolean ok, String model, Long latencyMs, String message) {}
 
-    public AiAdminController(AiSettingService settings) {
+    private final AiSettingService settings;
+    private final AiUsageService usage;
+    private final ClaudeGateway gateway;
+
+    public AiAdminController(AiSettingService settings, AiUsageService usage, ClaudeGateway gateway) {
         this.settings = settings;
+        this.usage = usage;
+        this.gateway = gateway;
+    }
+
+    @GetMapping("/usage")
+    public AiUsageService.Report usage(@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @RequestParam(required = false) String group) {
+        return usage.report(from, to, group, settings.view().monthlyLimitUsd());
+    }
+
+    /** 짧은 호출로 연결 확인 (사용량 purpose test). 실패도 200 + ok:false (원인 문구) */
+    @PostMapping("/test")
+    public TestResult test(Authentication auth) {
+        AiSettingService.Active a = settings.requireKey();
+        try {
+            ClaudeGateway.Ping p = gateway.ping(a.apiKey(), a.model());
+            var u = p.usage();
+            usage.record(auth.getName(), null, u.model(), u.input(), u.output(), u.cacheRead(), u.cacheWrite(), "test");
+            return new TestResult(true, p.model(), p.latencyMs(), null);
+        } catch (AiCallException e) {
+            return new TestResult(false, a.model(), null, e.getMessage());
+        }
     }
 
     @GetMapping

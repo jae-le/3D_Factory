@@ -39,13 +39,11 @@ public class ChangeLogService {
         return a == null || !a.isAuthenticated() ? null : a.getName();
     }
 
+    private static final java.util.regex.Pattern UUID_RE =
+            java.util.regex.Pattern.compile("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$");
+
     public static boolean isUuid(String s) {
-        try {
-            UUID.fromString(s);
-            return true;
-        } catch (RuntimeException e) {
-            return false;
-        }
+        return s != null && UUID_RE.matcher(s).matches();
     }
 
     public long record(String username, String source, long drawingId, String batchId, String kind, String target, String targetKey,
