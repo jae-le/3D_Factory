@@ -87,7 +87,7 @@ public final class Snapshots {
 
     public static String text(JsonNode n, String field) {
         JsonNode v = n == null ? null : n.get(field);
-        return v == null || v.isNull() ? null : v.asText();
+        return v == null || v.isNull() ? null : v.asString();
     }
 
     public static Long longOrNull(JsonNode n, String field) {

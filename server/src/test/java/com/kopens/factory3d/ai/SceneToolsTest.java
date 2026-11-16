@@ -28,7 +28,7 @@ class SceneToolsTest extends AiTestBase {
         assertThat(r.isError()).isFalse();
         assertThat(r.label()).isEqualTo("장면 확인 중…");
         assertThat(r.content()).contains("\"name\":\"나셀 공장\"", "\"widthM\":40.0", "Main Station 1", "\"model\":\"Main Station\"",
-                "조립 구역", "\"id\":\"p1\"", "\"taktMin\":20.0", "\"aliases\":[\"MS\"]", "\"pendingChanges\":0");
+                "조립 구역", "\"id\":\"p1\"", "\"taktMin\":20.0", "\"steps\":2", "\"projectId\":null", "\"id\":" + ms1 + ",\"name\":\"Main Station 1\"", "\"aliases\":[\"MS\"]", "\"pendingChanges\":0");
     }
 
     @Test

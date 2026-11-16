@@ -98,6 +98,7 @@ public class SceneTools {
         final Map<String, ObjectNode> partitions = new LinkedHashMap<>(); // 가벽 id → {id, pts, h, t}
         final Map<String, String> zones = new LinkedHashMap<>(); // 구역 id → 이름
         final Map<String, ObjectNode> stationsByKey = new LinkedHashMap<>(); // station:<id> → 스냅샷
+        final Map<String, StationView> stationViews = new LinkedHashMap<>(); // station:<id> → 표시용(step 수·PJT)
         final Map<Long, ModelInfo> modelsById = new LinkedHashMap<>();
         final Set<String> partitionIdsEver = new HashSet<>();
     }
@@ -111,11 +112,14 @@ public class SceneTools {
         s.h = s.plan.path("bounds").path("h").asDouble();
         for (PlacementView p : placements.findByDrawing(drawingId)) s.objects.put("placement:" + p.id(), Snapshots.placement(json, p));
         for (JsonNode p : s.plan.path("partitions")) {
-            s.partitions.put(p.path("id").asText(), (ObjectNode) p.deepCopy());
-            s.partitionIdsEver.add(p.path("id").asText());
+            s.partitions.put(p.path("id").asString(), (ObjectNode) p.deepCopy());
+            s.partitionIdsEver.add(p.path("id").asString());
         }
-        for (JsonNode z : s.plan.path("zones")) s.zones.put(z.path("id").asText(), z.path("name").asText());
-        for (StationView st : stations.findByDrawing(drawingId)) s.stationsByKey.put("station:" + st.id(), Snapshots.station(json, st));
+        for (JsonNode z : s.plan.path("zones")) s.zones.put(z.path("id").asString(), z.path("name").asString());
+        for (StationView st : stations.findByDrawing(drawingId)) {
+            s.stationsByKey.put("station:" + st.id(), Snapshots.station(json, st));
+            s.stationViews.put("station:" + st.id(), st);
+        }
         for (ModelInfo m : models.findAll()) s.modelsById.put(m.id(), m);
         for (Changeset.Item it : cs.items()) {
             switch (it.kind()) {
@@ -162,7 +166,7 @@ public class SceneTools {
         out.putObject("drawing").put("name", s.drawing.name()).put("widthM", r2(s.w)).put("heightM", r2(s.h));
         ArrayNode zones = out.putArray("zones");
         for (JsonNode z : s.plan.path("zones")) {
-            String id = z.path("id").asText();
+            String id = z.path("id").asString();
             double cx = 0, cy = 0;
             int k = 0;
             for (JsonNode p : z.path("poly")) {
@@ -170,32 +174,41 @@ public class SceneTools {
                 cy += p.path(1).asDouble();
                 k++;
             }
-            ObjectNode zn = zones.addObject().put("id", id).put("name", s.zones.getOrDefault(id, z.path("name").asText()));
+            ObjectNode zn = zones.addObject().put("id", id).put("name", s.zones.getOrDefault(id, z.path("name").asString()));
             if (k > 0) zn.putArray("center").add(r2(cx / k)).add(r2(cy / k));
         }
         ArrayNode parts = out.putArray("partitions");
         for (ObjectNode p : s.partitions.values()) {
             JsonNode pts = p.path("pts");
-            ObjectNode pn = parts.addObject().put("id", p.path("id").asText());
+            ObjectNode pn = parts.addObject().put("id", p.path("id").asString());
             pn.set("a", pts.path(0));
             pn.set("b", pts.path(pts.size() - 1));
         }
         ArrayNode objs = out.putArray("objects");
         int i = 0;
-        for (ObjectNode o : s.objects.values()) {
+        for (Map.Entry<String, ObjectNode> oe : s.objects.entrySet()) {
+            ObjectNode o = oe.getValue();
             if (i++ >= MAX_OBJECTS) break;
             ModelInfo m = model(s, o);
-            ObjectNode on = objs.addObject().put("name", text(o, "name"))
+            ObjectNode on = objs.addObject();
+            if (oe.getKey().startsWith("placement:")) on.put("id", Snapshots.idOf(oe.getKey())); else on.putNull("id");
+            on.put("name", text(o, "name"))
                     .put("model", m == null ? "(모델 없음)" : m.name()).put("category", m == null ? "" : m.category())
                     .put("x", r2(o.path("x").asDouble())).put("y", r2(o.path("y").asDouble())).put("rot", r2(o.path("rot").asDouble()));
             on.putArray("sizeM").add(r2(m == null ? 2 : m.sizeX())).add(r2(m == null ? 2 : m.sizeY()));
         }
         if (s.objects.size() > MAX_OBJECTS) out.put("omittedObjects", s.objects.size() - MAX_OBJECTS);
         ArrayNode sts = out.putArray("stations");
-        for (ObjectNode st : s.stationsByKey.values())
+        for (Map.Entry<String, ObjectNode> se : s.stationsByKey.entrySet()) {
+            ObjectNode st = se.getValue();
+            StationView sv = s.stationViews.get(se.getKey());
             sts.addObject().put("name", text(st, "name")).put("placementName", text(st, "placementName"))
                     .put("taktMin", r2(st.path("taktSec").asInt() / 60.0)).put("warnPp", st.path("warnPp").asInt())
-                    .put("delayPp", st.path("delayPp").asInt());
+                    .put("delayPp", st.path("delayPp").asInt())
+                    .put("steps", sv == null ? 0 : sv.steps().size());
+            if (sv != null && sv.projectId() != null) ((ObjectNode) sts.get(sts.size() - 1)).put("projectId", sv.projectId().longValue());
+            else ((ObjectNode) sts.get(sts.size() - 1)).putNull("projectId");
+        }
         ArrayNode ms = out.putArray("models");
         int j = 0;
         for (ModelInfo m : s.modelsById.values()) {
