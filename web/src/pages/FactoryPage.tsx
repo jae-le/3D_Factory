@@ -1,5 +1,11 @@
 import { Box, Gauge, Map as MapIcon } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { previewItems } from '../ai/chat'
+import { ChatPanel } from '../ai/ChatPanel'
+import { focusOf, previewOf, type Preview } from '../ai/preview'
+import type { ProposalItem } from '../ai/types'
+import { useAiStatus } from '../ai/useAiStatus'
+import { useChat } from '../ai/useChat'
 import { hasRole, useAuth } from '../auth/context'
 import { AddDrawingDialog } from '../drawing/AddDrawingDialog'
 import { DrawingTools } from '../drawing/DrawingTools'
@@ -9,7 +15,7 @@ import { useDrawing } from '../drawing/useDrawing'
 import { loadStored, pickDrawing, saveStored, useDrawings } from '../drawing/useDrawings'
 import { AppShell } from '../layout/AppShell'
 import { DrawingBar } from '../layout/DrawingBar'
-import { OBJECTS_PANEL_KEY } from '../layout/IconRail'
+import { OBJECTS_PANEL_KEY, OPEN_CHAT_KEY } from '../layout/IconRail'
 import { modelFileUrl } from '../objects/api'
 import { AddModelDialog } from '../objects/AddModelDialog'
 import { EditTag } from '../objects/EditTag'
@@ -20,7 +26,7 @@ import { ObjectPanel } from '../objects/ObjectPanel'
 import { BOX_SIZE, type ModelInfo, type Placement } from '../objects/types'
 import { useModels } from '../objects/useModels'
 import { usePlacements } from '../objects/usePlacements'
-import type { ObjectHost, PickSource, Quality, ViewMode } from '../scene/FactoryScene'
+import type { ObjectHost, PickSource, PreviewHost, Quality, ViewMode } from '../scene/FactoryScene'
 import { FactoryView } from '../scene/FactoryView'
 import type { SceneObject } from '../scene/objectLayer'
 import { ErrorPage } from './ErrorPage'
@@ -28,6 +34,7 @@ import { ErrorPage } from './ErrorPage'
 const UNIT_SCALE: Record<UnitName, number> = { inch: 0.0254, feet: 0.3048, mm: 0.001, cm: 0.01, m: 1 }
 const NO_MODELS: ModelInfo[] = []
 const PLACING_HINT = '클릭해 놓기 · 오른쪽 클릭 90° 회전 · Shift 격자 없이 · Esc 끝'
+type Side = 'objects' | 'chat' | null
 type ViewPref = { mode: ViewMode; quality: Quality }
 type DragPos = { id: number; x: number; y: number }
 
@@ -54,10 +61,10 @@ export function FactoryPage() {
   const [drawings, retry, refresh] = useDrawings()
   const [chosen, setChosen] = useState<number | null>(() => (user ? loadStored(user.username) : null))
   const [pref, setPref] = useState<ViewPref>(loadView)
-  const [scene, setScene] = useState<(PickSource & ObjectHost) | null>(null)
+  const [scene, setScene] = useState<(PickSource & ObjectHost & PreviewHost) | null>(null)
   const list = drawings.kind === 'ok' ? drawings.list : []
   const drawingId = pickDrawing(list, chosen)
-  const { state, save } = useDrawing(drawingId)
+  const { state, save, reload: reloadDrawing } = useDrawing(drawingId)
   const detail = state.kind === 'ok' && state.detail.id === drawingId ? state.detail : null
   const [adding, setAdding] = useState(false)
   const [addingModel, setAddingModel] = useState(false)
@@ -67,27 +74,44 @@ export function FactoryPage() {
   const models = useModels()
   const modelList = models.state.kind === 'ok' ? models.state.list : NO_MODELS
   const placements = usePlacements(detail?.id ?? null)
+  // AI 챗봇 (운전원 이상 + Claude API 사용 가능)
+  const ai = useAiStatus()
+  const canChat = canEdit && ai.kind === 'ok' && ai.status.enabled
+  const chat = useChat(canChat ? (detail?.id ?? null) : null, () => {
+    placements.reload()
+    reloadDrawing()
+  })
   const { add, update, remove, undo, redo } = placements
   const [selId, setSelId] = useState<number | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [placing, setPlacing] = useState<ModelInfo | null>(null)
   const [dragPos, setDragPos] = useState<DragPos | null>(null)
   const [toolOn, setToolOn] = useState(false)
-  const [panelOpen, setPanelOpen] = useState(() => {
+  // 옆 패널: 객체 · AI 챗봇 · 없음 (하나만). 다른 화면에서 레일 'AI 챗봇' 을 누르고 왔으면 챗봇
+  const [side, setSideState] = useState<Side>(() => {
     try {
-      return localStorage.getItem(OBJECTS_PANEL_KEY) !== '0'
+      if (localStorage.getItem(OPEN_CHAT_KEY) === '1') return 'chat'
+      return localStorage.getItem(OBJECTS_PANEL_KEY) !== '0' ? 'objects' : null
     } catch {
-      return true
+      return 'objects'
     }
   })
-  /** 객체 패널 열기·닫기 (레일 버튼은 보이는 상태 기준으로 뒤집음 — 패널이 안 그려진 동안 눌러도 한 번에 열림) */
-  const setPanel = (open: boolean) => {
-    setPanelOpen(open)
+  useEffect(() => {
     try {
-      localStorage.setItem(OBJECTS_PANEL_KEY, open ? '1' : '0')
+      localStorage.removeItem(OPEN_CHAT_KEY)
     } catch {
-      /* 저장 못 해도 동작 */
+      /* 없어도 동작 */
     }
+  }, [])
+  const setSide = (next: Side) => {
+    if (next === 'objects' || side === 'objects') {
+      try {
+        localStorage.setItem(OBJECTS_PANEL_KEY, next === 'objects' ? '1' : '0')
+      } catch {
+        /* 저장 못 해도 동작 */
+      }
+    }
+    setSideState(next)
   }
   const pendingNames = useRef(new Set<string>()) // 놓기 요청 중인 이름 — 빠른 연속 놓기에도 이름이 겹치지 않게
   // 도면이 바뀌면 선택·편집·배치 모드를 끝냄 (렌더 중 조정)
@@ -109,6 +133,16 @@ export function FactoryPage() {
   }
 
   const byId = useMemo(() => new Map(modelList.map((m) => [m.id, m])), [modelList])
+  const chatOn = side === 'chat' && canChat
+  const previewList = chatOn ? previewItems(chat.state) : null
+  const preview = useMemo<Preview | null>(
+    () => (previewList && previewList.length > 0 ? previewOf(previewList, (id) => (id != null ? (byId.get(id) ?? BOX_SIZE) : BOX_SIZE)) : null),
+    [previewList, byId],
+  )
+  const focusItem = (it: ProposalItem) => {
+    const f = focusOf(it)
+    if (f) scene?.focusPoint(f.x, f.y)
+  }
   const rows = placements.list
   const selected = rows.find((p) => p.id === selId) ?? null
   const editing = editingId != null && rows.some((p) => p.id === editingId) ? editingId : null
@@ -139,6 +173,7 @@ export function FactoryPage() {
 
   // 3D 와 맞추기
   useEffect(() => scene?.setObjects(sceneObjects), [scene, sceneObjects])
+  useEffect(() => scene?.setPreview(preview), [scene, preview])
   useEffect(() => scene?.setSelected(selected?.id ?? null), [scene, selected?.id])
   useEffect(() => scene?.setEditing(editing), [scene, editing])
   useEffect(() => {
@@ -291,9 +326,9 @@ export function FactoryPage() {
       </button>
     </>
   )
-  const side = detail && drawings.kind === 'ok' && list.length > 0 && (
+  const objectPanel = detail && drawings.kind === 'ok' && list.length > 0 && (
     <ObjectPanel
-      open={panelOpen}
+      open={side === 'objects'}
       models={modelList}
       placements={rows}
       canEdit={canEdit}
@@ -304,9 +339,18 @@ export function FactoryPage() {
       onAddModel={() => setAddingModel(true)}
     />
   )
-  const objectsOpen = panelOpen && !!side
+  const chatPanel = canChat && detail && (
+    <ChatPanel open={chatOn} chat={chat} onHover={(seq) => scene?.highlightPreview(seq)} onFocus={focusItem} />
+  )
+  const objectsOpen = side === 'objects' && !!objectPanel
+  const rail = {
+    objectsOpen,
+    onObjects: () => setSide(objectsOpen ? null : 'objects'),
+    chatOpen: chatOn,
+    onChat: () => setSide(chatOn ? null : 'chat'),
+  }
   return (
-    <AppShell active="factory" head={head} side={side} panel={{ objectsOpen, onObjects: () => setPanel(!objectsOpen) }}>
+    <AppShell active="factory" head={head} side={<>{objectPanel}{chatPanel}</>} panel={rail}>
       {drawings.kind === 'loading' ? (
         <p className="empty-state" role="status">도면 목록 불러오는 중…</p>
       ) : list.length === 0 ? (
