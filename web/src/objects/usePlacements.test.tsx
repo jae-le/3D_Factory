@@ -108,6 +108,53 @@ describe('usePlacements', () => {
     expect(result.current.error).toBeNull()
   })
 
+  it('A→B→A 로 돌아와도 떠나기 전 작업은 기록에 남지 않음', async () => {
+    const s = fakeServer()
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    let sent = false
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (url === '/api/drawings/4/placements') return json(200, [])
+      if (init?.method === 'PATCH') {
+        sent = true
+        await gate
+      }
+      return s.fetch(url, init)
+    })
+    const { result, rerender } = renderHook(({ d }) => usePlacements(d), { initialProps: { d: 3 } })
+    await waitFor(() => expect(result.current.list).toHaveLength(1))
+    let pending!: Promise<void>
+    act(() => { pending = result.current.update(1, { x: 5 }) })
+    await waitFor(() => expect(sent).toBe(true)) // A 에서 요청이 나간 뒤에 떠남
+    rerender({ d: 4 })
+    rerender({ d: 3 })
+    await act(async () => { release(); await pending })
+    await waitFor(() => expect(result.current.list).toHaveLength(1))
+    expect(result.current.canUndo).toBe(false)
+  })
+
+  it('실패하면 다음 작업 전에 서버 목록을 다시 읽어 이전 값이 맞음', async () => {
+    const s = fakeServer()
+    let fail = true
+    vi.stubGlobal('fetch', async (url: string, init?: RequestInit) => {
+      if (init?.method === 'PATCH' && fail) {
+        fail = false
+        s.rows.set(1, { ...s.rows.get(1)!, x: 9 }) // 다른 사람이 옮겨 둠
+        return json(409, { detail: '충돌' })
+      }
+      return s.fetch(url, init)
+    })
+    const { result } = renderHook(() => usePlacements(3))
+    await waitFor(() => expect(result.current.list).toHaveLength(1))
+    await act(async () => {
+      void result.current.update(1, { x: 5 })
+      await result.current.update(1, { x: 7 })
+    })
+    expect(s.rows.get(1)).toMatchObject({ x: 7 })
+    await act(() => result.current.undo())
+    expect(s.rows.get(1)).toMatchObject({ x: 9 })
+  })
+
   it('도면이 없으면 빈 목록', () => {
     const { result } = renderHook(() => usePlacements(null))
     expect(result.current.list).toEqual([])

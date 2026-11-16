@@ -122,7 +122,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost,
   private objEvents: ObjectEvents | null = null
   private editingId: number | null = null
   // 편집 끌기: 잡은 점과 중심의 차이(plan m), 마지막 자리
-  private drag: { id: number; pointerId: number; dx: number; dy: number; x: number; y: number; moved: boolean } | null = null
+  private drag: { id: number; pointerId: number; dx: number; dy: number; x: number; y: number; ox: number; oy: number; moved: boolean } | null = null
   private skipClick = false // 끌기 끝난 직후의 click 은 선택을 바꾸지 않음
   private rDownAt: { x: number; y: number } | null = null // 오른쪽 누른 자리 (배치 회전은 안 움직인 오른쪽 클릭만)
   // 측정 점: 화면 크기 고정 점, 선: 항상 위에 (깊이 무시)
@@ -200,7 +200,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost,
     dom.addEventListener('pointerdown', this.onPointerDown, true)
     dom.addEventListener('pointermove', this.onPointerMove)
     dom.addEventListener('pointerup', this.onPointerUp)
-    dom.addEventListener('pointercancel', this.onPointerUp)
+    dom.addEventListener('pointercancel', this.onPointerCancel)
     dom.addEventListener('contextmenu', this.onContextMenu)
     dom.addEventListener('click', this.onClick)
     dom.addEventListener('dblclick', this.onDblClick)
@@ -424,7 +424,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost,
     dom.removeEventListener('pointerdown', this.onPointerDown, true)
     dom.removeEventListener('pointermove', this.onPointerMove)
     dom.removeEventListener('pointerup', this.onPointerUp)
-    dom.removeEventListener('pointercancel', this.onPointerUp)
+    dom.removeEventListener('pointercancel', this.onPointerCancel)
     dom.removeEventListener('contextmenu', this.onContextMenu)
     dom.removeEventListener('click', this.onClick)
     dom.removeEventListener('dblclick', this.onDblClick)
@@ -657,7 +657,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost,
     const p = this.groundPlan(ev) // this.ray 도 맞춰짐
     const o = this.objectLayer.object(id)
     if (!p || !o || this.objectLayer.pick(this.ray) !== id) return
-    this.drag = { id, pointerId: ev.pointerId, dx: p.x - o.x, dy: p.y - o.y, x: o.x, y: o.y, moved: false }
+    this.drag = { id, pointerId: ev.pointerId, dx: p.x - o.x, dy: p.y - o.y, x: o.x, y: o.y, ox: o.x, oy: o.y, moved: false }
     this.controls.enabled = false
     const dom = this.renderer.domElement
     dom.setPointerCapture(ev.pointerId)
@@ -694,6 +694,16 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost,
     if (!d.moved) return // 움직이지 않았으면 보통 클릭으로 (선택)
     this.skipClick = true
     this.objEvents?.onDrop?.(d.id, d.x, d.y)
+  }
+
+  /** 끌기가 끊김(터치 취소·창 밖 등): 놓지 않고 원래 자리로 */
+  private onPointerCancel = (ev: PointerEvent) => {
+    const d = this.drag
+    if (!d || ev.pointerId !== d.pointerId) return
+    this.endDrag()
+    if (!d.moved) return
+    this.objectLayer.move(d.id, d.ox, d.oy)
+    this.objEvents?.onDragCancel?.(d.id)
   }
 
   private endDrag() {

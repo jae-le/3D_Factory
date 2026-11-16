@@ -8,7 +8,8 @@ interface Props {
   models: ModelInfo[]
   canEdit: boolean
   editing: boolean
-  onRename(name: string): void
+  /** false = 거절(같은 이름 등): 입력을 원래 이름으로 되돌리고 다시 고칠 수 있게 함 */
+  onRename(name: string): boolean | void
   onEdit(): void
   onRotate(): void
   onDelete(): void
@@ -28,7 +29,10 @@ export function ObjectInfo({ placement, model, models, canEdit, editing, onRenam
     }
     if (v === sent.current) return
     sent.current = v
-    onRename(v)
+    if (onRename(v) === false) {
+      sent.current = placement.name
+      setName(placement.name)
+    }
   }
   return (
     <section className="object-info" aria-label="객체 정보">

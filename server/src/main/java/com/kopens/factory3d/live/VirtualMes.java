@@ -84,7 +84,12 @@ public class VirtualMes implements ProductionSource {
         }
     }
 
-    private record Delivery(long drawingId, List<Object> messages) {}
+    /** writes: 잠금 밖에서 할 DB 쓰기 (쓰는 동안 snapshot·구독이 막히지 않게) */
+    private record Delivery(long drawingId, List<Object> messages, List<Runnable> writes) {
+        Delivery(long drawingId, List<Object> messages) {
+            this(drawingId, messages, List.of());
+        }
+    }
 
     private final StationMapper stationMapper;
     private final ProjectMapper projectMapper;
@@ -205,13 +210,14 @@ public class VirtualMes implements ProductionSource {
 
     /** 올라 있는 모든 도면을 실제 dtSec 초만큼 진행하고 도면별로 event… → projects → tick 을 전달 */
     public void advance(double dtSec) {
+        List<Delivery> out = new ArrayList<>();
         synchronized (deliverLock) {
-            List<Delivery> out = new ArrayList<>();
             synchronized (this) {
                 for (Board b : boards.values()) out.add(step(b, Math.max(0, dtSec)));
             }
             out.forEach(this::deliver);
         }
+        for (Delivery d : out) d.writes().forEach(Runnable::run); // DB 쓰기는 두 잠금 밖에서
     }
 
     static String statusOf(double gap, int warnPp, int delayPp) {
@@ -302,6 +308,7 @@ public class VirtualMes implements ProductionSource {
 
     private Delivery step(Board b, double dt) {
         List<Object> msgs = new ArrayList<>();
+        List<Runnable> writes = new ArrayList<>();
         LocalDate today = today();
         if (!today.equals(b.day)) {
             b.day = today;
@@ -318,7 +325,7 @@ public class VirtualMes implements ProductionSource {
             u.actual += inc * u.rate;
             while (u.actual >= 100) { // 한 대 완료 → 다음 대 (남은 계획 지연분은 이어짐)
                 emit(b, msgs, u, "step_done", s.name() + " " + stepName(s, u.step) + " 완료", Map.of("step", u.step));
-                projectsChanged |= unitDone(b, msgs, u);
+                projectsChanged |= unitDone(b, msgs, writes, u);
                 u.actual -= 100;
                 u.target = Math.max(0, u.target - 100);
                 u.step = stepOf(u.actual, n);
@@ -349,11 +356,11 @@ public class VirtualMes implements ProductionSource {
         }
         if (projectsChanged) msgs.add(new LiveMessages.Projects("projects", projectsOf(b)));
         msgs.add(new LiveMessages.Tick("tick", kpi(b), stationsOf(b)));
-        return new Delivery(b.drawingId, msgs);
+        return new Delivery(b.drawingId, msgs, writes);
     }
 
     /** 한 대 완료: 메인 스테이션은 PJT 제작 수 +1 (DB), 모든 완료가 오늘 완료 +1 (DB). PJT 가 바뀌었으면 true */
-    private boolean unitDone(Board b, List<Object> msgs, Unit u) {
+    private boolean unitDone(Board b, List<Object> msgs, List<Runnable> writes, Unit u) {
         StationView s = u.s;
         ProjectView p = s.projectId() == null ? null : b.projects.get(s.projectId());
         boolean changed = false;
@@ -364,7 +371,8 @@ public class VirtualMes implements ProductionSource {
             if (done != p.done()) {
                 p = new ProjectView(p.id(), p.name(), done, p.total(), p.period(), p.state(), p.sortOrder());
                 b.projects.put(p.id(), p);
-                persistDone(p);
+                ProjectView saved = p;
+                writes.add(() -> persistDone(saved));
                 changed = true;
             }
             text = s.name() + " · " + p.name() + " " + done + "호기 완료";
@@ -374,7 +382,9 @@ public class VirtualMes implements ProductionSource {
             text = s.name() + " 1대 조립 완료";
         }
         b.doneToday++;
-        persistDaily(b.drawingId, b.day);
+        long drawingId = b.drawingId;
+        LocalDate day = b.day;
+        writes.add(() -> persistDaily(drawingId, day));
         u.rate = Math.max(0.6, Math.min(1.1, u.rate + (u.rnd.nextDouble() * 0.16 - 0.08)));
         emit(b, msgs, u, "unit_done", text, data);
         return changed;

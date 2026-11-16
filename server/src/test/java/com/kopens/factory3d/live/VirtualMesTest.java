@@ -131,6 +131,29 @@ class VirtualMesTest extends IntegrationTest {
     }
 
     @Test
+    void DB_쓰기가_느려도_snapshot_은_막히지_않음() throws Exception {
+        mes.override(drawing, station, 99.5, 99.5, 1);
+        try (var con = jdbc.getDataSource().getConnection()) {
+            con.setAutoCommit(false);
+            try (var st = con.prepareStatement("select 1 from project where id = ? for update")) {
+                st.setLong(1, project);
+                st.executeQuery();
+            }
+            var run = java.util.concurrent.CompletableFuture.runAsync(() -> mes.advance(1)); // PJT 저장에서 기다림
+            long until = System.currentTimeMillis() + 5000;
+            while (got.stream().noneMatch(m -> m instanceof LiveMessages.Tick) && System.currentTimeMillis() < until) Thread.sleep(20);
+            assertThat(got).anyMatch(m -> m instanceof LiveMessages.Tick); // 전달은 쓰기 전에 끝남
+            var snap = java.util.concurrent.CompletableFuture.supplyAsync(() -> mes.snapshot(drawing))
+                    .get(2, java.util.concurrent.TimeUnit.SECONDS);
+            assertThat(snap.projects().get(0).done()).isEqualTo(4);
+            assertThat(run).isNotDone();
+            con.rollback();
+            run.get(5, java.util.concurrent.TimeUnit.SECONDS);
+        }
+        assertThat(jdbc.queryForObject("select done from project where id = ?", Integer.class, project)).isEqualTo(4);
+    }
+
+    @Test
     void 상태가_바뀔_때_한_번만_status_change() {
         mes.override(drawing, station, 50, 59, 0); // 실적 멈춤, 목표만 1초에 +1
         mes.advance(1); // 차 10 → 진행중 그대로

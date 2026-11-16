@@ -189,6 +189,7 @@ export function FactoryPage() {
         setEditingId((e) => (e === id ? e : null))
       },
       onDrag: (id, x, y) => setDragPos({ id, x, y }),
+      onDragCancel: (id) => setDragPos((d) => (d && d.id === id ? null : d)),
       onDrop: (id, x, y) => {
         setDragPos({ id, x, y })
         void update(id, { x, y }).finally(() => setDragPos((d) => (d && d.id === id && d.x === x && d.y === y ? null : d)))
@@ -283,8 +284,11 @@ export function FactoryPage() {
       canEdit={canEdit}
       editing={editing === selected.id}
       onRename={(name) => {
-        if (rows.some((p) => p.id !== selected.id && p.name === name)) setToast(`같은 이름의 객체가 이미 있습니다: ${name}`)
-        else void update(selected.id, { name })
+        if (rows.some((p) => p.id !== selected.id && p.name === name)) {
+          setToast(`같은 이름의 객체가 이미 있습니다: ${name}`)
+          return false
+        }
+        void update(selected.id, { name })
       }}
       onEdit={() => {
         setPlacing(null)

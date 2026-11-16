@@ -63,6 +63,17 @@ describe('객체 정보 카드', () => {
     expect(p.onRotate).toHaveBeenCalled()
     expect(p.onDelete).toHaveBeenCalled()
   })
+  it('이름이 거절되면 원래 이름으로 돌아가고 같은 이름으로 다시 시도 가능', () => {
+    const onRename = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(undefined)
+    render(<ObjectInfo {...base} onRename={onRename} placement={placements[0]} />)
+    const name = screen.getByLabelText('객체 이름')
+    fireEvent.change(name, { target: { value: '허브 B' } })
+    fireEvent.keyDown(name, { key: 'Enter' })
+    expect(name).toHaveValue(placements[0].name)
+    fireEvent.change(name, { target: { value: '허브 B' } })
+    fireEvent.keyDown(name, { key: 'Enter' })
+    expect(onRename).toHaveBeenCalledTimes(2)
+  })
   it('모델 없는 배치는 모델 지정, 조회 권한은 읽기만', () => {
     const p = { ...base, model: null, onAssign: vi.fn() }
     const { unmount } = render(<ObjectInfo {...p} placement={placements[2]} />)

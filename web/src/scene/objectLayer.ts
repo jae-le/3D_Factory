@@ -10,6 +10,7 @@ export interface ObjectEvents {
   onSelect(id: number | null): void // 클릭으로 고름 (빈 곳 클릭 = null)
   onDrag?(id: number, x: number, y: number): void // 편집 끌기 중 (plan 좌표, 격자 붙음)
   onDrop?(id: number, x: number, y: number): void // 끌기 끝
+  onDragCancel?(id: number): void // 끌기 끊김 → 원래 자리
   onPlace?(x: number, y: number, rot: number): void // 배치 모드 클릭
 }
 export interface GhostSpec { url: string | null; sizeX: number; sizeY: number; sizeZ: number }

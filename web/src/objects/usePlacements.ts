@@ -15,6 +15,9 @@ export function usePlacements(drawingId: number | null) {
   const idRef = useRef(drawingId)
   const rowsRef = useRef<Placement[]>([])
   const queue = useRef<Promise<unknown>>(Promise.resolve())
+  /** 도면을 바꾸거나 다시 불러올 때마다 +1. 작업은 한 줄로 돌므로 시작할 때의 값과 같아야 결과를 반영함 (A→B→A 로 돌아와도 옛 작업은 버림) */
+  const genRef = useRef(0)
+  const opGen = useRef(0)
   const list = useMemo(() => (data && data.id === drawingId ? data.rows : []), [data, drawingId])
   useEffect(() => {
     idRef.current = drawingId
@@ -25,16 +28,19 @@ export function usePlacements(drawingId: number | null) {
     setFlags({ id: idRef.current, canUndo: history.current.canUndo, canRedo: history.current.canRedo })
   }, [])
 
+  const alive = useCallback((drawing: number) => idRef.current === drawing && genRef.current === opGen.current, [])
+
   const setRows = useCallback((drawing: number, fn: (rows: Placement[]) => Placement[]) => {
-    if (idRef.current !== drawing) return
+    if (!alive(drawing)) return
     const next = fn(rowsRef.current)
     rowsRef.current = next
     setData({ id: drawing, rows: next })
-  }, [])
+  }, [alive])
 
   const reloadList = useCallback(() => setTick((n) => n + 1), [])
 
   useEffect(() => {
+    genRef.current++
     history.current.clear()
     rowsRef.current = []
     if (drawingId === null) return
@@ -56,18 +62,28 @@ export function usePlacements(drawingId: number | null) {
     async (fn: (drawing: number) => Promise<void>) => {
       const drawing = idRef.current
       if (drawing === null) return
+      opGen.current = genRef.current
       try {
         await fn(drawing)
-        if (idRef.current === drawing) setErr(null)
+        if (alive(drawing)) setErr(null)
       } catch (e) {
-        if (idRef.current !== drawing) return
+        if (!alive(drawing)) return
         setErr({ id: drawing, message: (e as Error).message })
         history.current.clear()
         bump()
-        reloadList()
+        // 다음 작업이 옛 목록을 보지 않게, 줄 안에서 서버 기준 목록을 바로 다시 읽음
+        try {
+          const rows = await listPlacements(drawing)
+          if (alive(drawing)) {
+            rowsRef.current = rows
+            setData({ id: drawing, rows })
+          }
+        } catch {
+          if (alive(drawing)) reloadList()
+        }
       }
     },
-    [bump, reloadList],
+    [alive, bump, reloadList],
   )
 
   /** 변경 작업은 한 줄로 세워 앞 작업이 끝난(목록·기록 반영까지) 뒤에 시작 */
@@ -85,7 +101,7 @@ export function usePlacements(drawingId: number | null) {
       let made: Placement[] = []
       await run(async (drawing) => {
         const res = await createPlacements(drawing, items)
-        if (idRef.current !== drawing) return
+        if (!alive(drawing)) return
         made = res
         setRows(drawing, (l) => [...l, ...res])
         if (items.length === 1 && res.length === 1) {
@@ -95,7 +111,7 @@ export function usePlacements(drawingId: number | null) {
       })
       return made
     },
-    [run, bump, setRows],
+    [run, bump, setRows, alive],
   )
 
   const update = useCallback(
@@ -114,14 +130,14 @@ export function usePlacements(drawingId: number | null) {
           }
         }
         const res = await updatePlacement(id, patch)
-        if (idRef.current !== drawing) return
+        if (!alive(drawing)) return
         setRows(drawing, (l) => l.map((p) => (p.id === id ? res : p)))
         if (cur) {
           history.current.push({ kind: 'update', id, before, after: patch })
           bump()
         }
       }),
-    [run, bump, setRows],
+    [run, bump, setRows, alive],
   )
 
   const remove = useCallback(
@@ -129,35 +145,35 @@ export function usePlacements(drawingId: number | null) {
       run(async (drawing) => {
         const cur = rowsRef.current.find((p) => p.id === id)
         await deletePlacement(id)
-        if (idRef.current !== drawing) return
+        if (!alive(drawing)) return
         setRows(drawing, (l) => l.filter((p) => p.id !== id))
         if (cur) {
           history.current.push({ kind: 'delete', placement: cur })
           bump()
         }
       }),
-    [run, bump, setRows],
+    [run, bump, setRows, alive],
   )
 
   /** 지워진 항목을 다시 만들고 기록 속 옛 id 를 새 id 로 바꿈 */
   const recreate = useCallback(async (drawing: number, p: Placement) => {
     const [made] = await createPlacements(drawing, [recreateBody(p)])
-    if (idRef.current !== drawing) return
+    if (!alive(drawing)) return
     history.current.remap(p.id, made.id)
     setRows(drawing, (l) => [...l, made])
-  }, [setRows])
+  }, [setRows, alive])
 
   const erase = useCallback(async (drawing: number, id: number) => {
     await deletePlacement(id)
-    if (idRef.current !== drawing) return
+    if (!alive(drawing)) return
     setRows(drawing, (l) => l.filter((p) => p.id !== id))
-  }, [setRows])
+  }, [setRows, alive])
 
   const patch = useCallback(async (drawing: number, id: number, body: PlacementPatch) => {
     const res = await updatePlacement(id, body)
-    if (idRef.current !== drawing) return
+    if (!alive(drawing)) return
     setRows(drawing, (l) => l.map((p) => (p.id === id ? res : p)))
-  }, [setRows])
+  }, [setRows, alive])
 
   const undo = useCallback(
     () =>
