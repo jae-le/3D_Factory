@@ -1,6 +1,8 @@
 package com.kopens.factory3d.placement;
 
 import com.kopens.factory3d.audit.AuditService;
+import com.kopens.factory3d.change.ChangeLogService;
+import com.kopens.factory3d.change.Snapshots;
 import com.kopens.factory3d.common.BadRequestException;
 import com.kopens.factory3d.common.ConflictException;
 import com.kopens.factory3d.common.NotFoundException;
@@ -10,6 +12,8 @@ import java.util.HashSet;
 import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /** 도면별 객체 배치 */
 @Service
@@ -22,12 +26,17 @@ public class PlacementService {
     private final DrawingMapper drawings;
     private final ModelMapper models;
     private final AuditService audit;
+    private final ChangeLogService changes;
+    private final ObjectMapper json;
 
-    public PlacementService(PlacementMapper placements, DrawingMapper drawings, ModelMapper models, AuditService audit) {
+    public PlacementService(PlacementMapper placements, DrawingMapper drawings, ModelMapper models, AuditService audit,
+            ChangeLogService changes, ObjectMapper json) {
         this.placements = placements;
         this.drawings = drawings;
         this.models = models;
         this.audit = audit;
+        this.changes = changes;
+        this.json = json;
     }
 
     public List<PlacementView> list(long drawingId) {
@@ -41,6 +50,11 @@ public class PlacementService {
         if (items == null || items.isEmpty() || items.size() > 2000) throw new BadRequestException("추가할 객체는 1~2000개여야 합니다.");
         List<PlacementMapper.NewRow> rows = items.stream().map(this::toRow).toList();
         insertAll(drawingId, rows);
+        String batch = ChangeLogService.newBatch(), by = ChangeLogService.currentUser();
+        for (var r : rows) {
+            PlacementView v = placements.findById(r.id);
+            changes.record(by, "USER", drawingId, batch, "placement.add", v.name(), "placement:" + v.id(), null, Snapshots.placement(json, v));
+        }
         audit.log("PLACEMENT_CREATE", "drawing=" + drawingId, rows.size() + "개");
         return rows.stream().map(r -> placements.findById(r.id)).toList();
     }
@@ -66,15 +80,24 @@ public class PlacementService {
         double y = p.y() == null ? cur.y() : finite(p.y());
         double rot = p.rot() == null ? cur.rot() : finite(p.rot());
         placements.update(id, modelId, name, x, y, rot);
+        PlacementView next = placements.findById(id);
+        JsonNode before = Snapshots.placement(json, cur), after = Snapshots.placement(json, next);
+        String kind = Snapshots.placementKind(before, after);
+        if (kind != null)
+            changes.record(ChangeLogService.currentUser(), "USER", drawingId, ChangeLogService.newBatch(), kind, cur.name(),
+                    "placement:" + id, before, after);
         audit.log("PLACEMENT_UPDATE", name, "id=" + id);
-        return placements.findById(id);
+        return next;
     }
 
     @Transactional
     public void delete(long id) {
         PlacementView cur = placements.findById(id);
         if (cur == null) throw new NotFoundException("객체를 찾을 수 없습니다.");
+        long drawingId = placements.drawingOf(id);
         placements.delete(id);
+        changes.record(ChangeLogService.currentUser(), "USER", drawingId, ChangeLogService.newBatch(), "placement.delete", cur.name(),
+                "placement:" + id, Snapshots.placement(json, cur), null);
         audit.log("PLACEMENT_DELETE", cur.name(), "id=" + id);
     }
 

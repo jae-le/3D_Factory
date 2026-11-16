@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.change.ChangeLogMapper">
+
+    <resultMap id="entry" type="com.kopens.factory3d.change.ChangeEntry">
+        <constructor>
+            <idArg column="id" javaType="_long"/>
+            <arg column="at" javaType="java.time.OffsetDateTime"/>
+            <arg column="username" javaType="String"/>
+            <arg column="source" javaType="String"/>
+            <arg column="drawing_id" javaType="_long"/>
+            <arg column="drawing_name" javaType="String"/>
+            <arg column="batch_id" javaType="String"/>
+            <arg column="kind" javaType="String"/>
+            <arg column="target" javaType="String"/>
+            <arg column="target_key" javaType="String"/>
+            <arg column="before" javaType="String"/>
+            <arg column="after" javaType="String"/>
+            <arg column="reverted" javaType="_boolean"/>
+            <arg column="reverted_by" javaType="String"/>
+            <arg column="reverted_at" javaType="java.time.OffsetDateTime"/>
+        </constructor>
+    </resultMap>
+
+    <sql id="cols">
+        c.id, c.at, c.username, c.source, c.drawing_id, d.name as drawing_name, c.batch_id::text as batch_id, c.kind, c.target,
+        c.target_key, c.before::text as before, c.after::text as after, c.reverted, c.reverted_by, c.reverted_at
+    </sql>
+
+    <sql id="where">
+        <where>
+            <if test="f.drawingId != null">c.drawing_id = #{f.drawingId}</if>
+            <if test="f.source != null">and c.source = #{f.source}</if>
+            <if test="f.from != null">and c.at &gt;= #{f.from}</if>
+            <if test="f.to != null">and c.at &lt; #{f.to}</if>
+        </where>
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="r.id" keyColumn="id">
+        insert into change_log (username, source, drawing_id, batch_id, kind, target, target_key, before, after)
+        values (#{r.username,jdbcType=VARCHAR}, #{r.source}, #{r.drawingId}, cast(#{r.batchId} as uuid), #{r.kind},
+                #{r.target,jdbcType=VARCHAR}, #{r.targetKey}, cast(#{r.before,jdbcType=VARCHAR} as jsonb),
+                cast(#{r.after,jdbcType=VARCHAR} as jsonb))
+    </insert>
+
+    <select id="find" resultMap="entry">
+        select <include refid="cols"/> from change_log c join drawing d on d.id = c.drawing_id
+        <include refid="where"/>
+        order by c.id desc limit #{limit} offset #{offset}
+    </select>
+
+    <select id="count" resultType="_long">
+        select count(*) from change_log c <include refid="where"/>
+    </select>
+
+    <select id="findBatch" resultMap="entry">
+        select <include refid="cols"/> from change_log c join drawing d on d.id = c.drawing_id
+        where c.batch_id = cast(#{batchId} as uuid) order by c.id
+    </select>
+
+    <select id="countLater" resultType="_int">
+        select count(*) from change_log
+        where drawing_id = #{drawingId} and id &gt; #{afterId} and not reverted and batch_id &lt;&gt; cast(#{batchId} as uuid)
+          and target_key in <foreach collection="keys" item="k" open="(" separator="," close=")">#{k}</foreach>
+    </select>
+
+    <update id="markReverted">
+        update change_log set reverted = true, reverted_by = #{by,jdbcType=VARCHAR}, reverted_at = now()
+        where batch_id = cast(#{batchId} as uuid) and not reverted
+    </update>
+</mapper>

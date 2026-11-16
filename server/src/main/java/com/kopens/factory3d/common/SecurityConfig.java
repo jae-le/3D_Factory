@@ -72,6 +72,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/drawings/*/stations", "/api/drawings/*/projects").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/drawings/*/stations/order").hasRole("ADMIN")
                         .requestMatchers("/api/stations/**", "/api/projects/**").hasRole("ADMIN")
+                        // 변경 이력 조회는 관리자 (되돌리기 POST 는 기본 규칙 = 운전원 이상, 서비스가 본인 묶음인지 검사)
+                        .requestMatchers(HttpMethod.GET, "/api/changes", "/api/changes/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/**").hasRole("VIEWER")
                         .requestMatchers("/api/**").hasRole("OPERATOR")
                         .requestMatchers("/ws/**").hasRole("VIEWER") // 상황판 WebSocket: 조회 이상 (비밀번호 변경 전 세션은 403)
