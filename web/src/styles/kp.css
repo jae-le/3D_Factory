@@ -265,3 +265,24 @@
   .st-cols { grid-template-columns: 1fr; }
   .st-panel { position: static; }
 }
+
+/* ---------- 관리자 › AI ---------- */
+.ai-sub { margin: var(--kp-sp-24) 0 var(--kp-sp-8); font-size: var(--kp-text-14); font-weight: 600; }
+.ai-warn { margin-bottom: var(--kp-sp-16); padding: var(--kp-sp-10) var(--kp-sp-12); border: 1px solid var(--kp-red); border-radius: var(--kp-radius-sm); background: #fff5f5; }
+.ai-key-state { display: flex; align-items: center; gap: var(--kp-sp-6); margin: 0 0 var(--kp-sp-8); }
+.ai-key { min-width: 320px; }
+.ai-settings { max-width: 420px; }
+.ai-check { display: flex; align-items: center; gap: var(--kp-sp-8); font-size: var(--kp-text-14); }
+.kp-badge.source-ai { background: #eef2ff; color: #4338ca; }
+.kp-badge.source-user { background: var(--kp-disabled-fill); color: var(--kp-text-sub-2); }
+.change-json { display: grid; grid-template-columns: 1fr 1fr; gap: var(--kp-sp-12); }
+.change-json pre { margin: var(--kp-sp-4) 0 0; padding: var(--kp-sp-8); max-height: 260px; overflow: auto; background: var(--kp-bg); border-radius: var(--kp-radius-sm); font-size: var(--kp-text-12); }
+.kp-pager { display: flex; align-items: center; justify-content: center; gap: var(--kp-sp-12); margin-top: var(--kp-sp-16); font-size: var(--kp-text-13); }
+.usage-month { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--kp-sp-12); margin-bottom: var(--kp-sp-16); }
+.usage-month > div { display: flex; flex-direction: column; gap: var(--kp-sp-4); padding: var(--kp-sp-12) var(--kp-sp-16); border: 1px solid var(--kp-border); border-radius: var(--kp-radius-sm); }
+.usage-month span { font-size: var(--kp-text-13); color: var(--kp-text-sub-2); }
+.usage-month strong { font-size: var(--kp-text-16); font-variant-numeric: tabular-nums; }
+.usage-bar { height: 6px; border-radius: 3px; background: var(--kp-disabled-fill); overflow: hidden; }
+.usage-bar span { display: block; height: 100%; background: var(--kp-green); }
+.usage-bar.warn span { background: #cd8d0b; }
+.usage-bar.bad span { background: var(--kp-red); }
