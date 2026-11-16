@@ -41,3 +41,6 @@ factory3d:
     enabled: ${F3D_LIVE_ENABLED:true}          # 가상 MES 1초 진행 (테스트는 끔 — advance 를 직접 부름)
     time-scale: ${F3D_LIVE_TIME_SCALE:1}       # 진행 속도 배율 (1 = 실제 시간, 화면 확인은 30)
     allowed-origins: ${F3D_LIVE_ORIGINS:http://localhost:5200} # 같은 출처는 항상 허용, 개발 서버(vite) 추가
+  ai:
+    fake: ${F3D_AI_FAKE:false}            # true = 가짜 게이트웨이(정해 둔 대본). 실제 Claude 를 부르지 않음 (테스트·화면 확인)
+    master-key: ${F3D_AI_MASTER_KEY:}     # base64 32바이트 — API 키 암호화(AES-GCM). 없으면 키 등록 불가

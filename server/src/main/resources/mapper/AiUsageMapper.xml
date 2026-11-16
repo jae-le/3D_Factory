@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.ai.AiUsageMapper">
+
+    <resultMap id="row" type="com.kopens.factory3d.ai.UsageRow">
+        <constructor>
+            <arg column="key" javaType="String"/>
+            <arg column="calls" javaType="_long"/>
+            <arg column="input_tokens" javaType="_long"/>
+            <arg column="output_tokens" javaType="_long"/>
+            <arg column="cache_read_tokens" javaType="_long"/>
+            <arg column="cache_write_tokens" javaType="_long"/>
+            <arg column="cost_usd" javaType="java.math.BigDecimal"/>
+        </constructor>
+    </resultMap>
+
+    <insert id="insert">
+        insert into ai_usage (username, drawing_id, model, input_tokens, output_tokens, cache_read_tokens, cache_write_tokens, cost_usd, purpose)
+        values (#{r.username,jdbcType=VARCHAR}, #{r.drawingId,jdbcType=BIGINT}, #{r.model}, #{r.inputTokens}, #{r.outputTokens},
+                #{r.cacheReadTokens}, #{r.cacheWriteTokens}, #{r.costUsd}, #{r.purpose})
+    </insert>
+
+    <select id="sumCost" resultType="java.math.BigDecimal">
+        select coalesce(sum(cost_usd), 0) from ai_usage where at &gt;= #{from} and at &lt; #{to}
+    </select>
+
+    <select id="group" resultMap="row">
+        select
+        <choose>
+            <when test="by == 'day'">to_char(at at time zone #{zone}, 'YYYY-MM-DD')</when>
+            <when test="by == 'user'">coalesce(username, '—')</when>
+            <otherwise>'month'</otherwise>
+        </choose> as key,
+            count(*) as calls,
+            coalesce(sum(input_tokens), 0) as input_tokens,
+            coalesce(sum(output_tokens), 0) as output_tokens,
+            coalesce(sum(cache_read_tokens), 0) as cache_read_tokens,
+            coalesce(sum(cache_write_tokens), 0) as cache_write_tokens,
+            coalesce(sum(cost_usd), 0) as cost_usd
+        from ai_usage
+        where at &gt;= #{from} and at &lt; #{to}
+        <if test="by == 'day'">group by 1 order by 1 desc</if>
+        <if test="by == 'user'">group by 1 order by sum(cost_usd) desc, 1</if>
+    </select>
+</mapper>

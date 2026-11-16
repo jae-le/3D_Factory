@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.kopens.factory3d.ai.AiSettingMapper">
+    <insert id="ensureRow">insert into ai_setting (id) values (1) on conflict (id) do nothing</insert>
+
+    <select id="find" resultType="com.kopens.factory3d.ai.AiSettingMapper$Row">
+        select api_key_enc, key_hint, model, monthly_limit_usd, enabled, updated_by, updated_at from ai_setting where id = 1
+    </select>
+
+    <update id="updateKey">
+        update ai_setting set api_key_enc = #{enc,jdbcType=BINARY}, key_hint = #{hint,jdbcType=VARCHAR},
+            updated_by = #{by,jdbcType=VARCHAR}, updated_at = now()
+        where id = 1
+    </update>
+
+    <update id="update">
+        update ai_setting set model = #{model}, monthly_limit_usd = #{limit}, enabled = #{enabled},
+            updated_by = #{by,jdbcType=VARCHAR}, updated_at = now()
+        where id = 1
+    </update>
+</mapper>

@@ -68,6 +68,8 @@ public abstract class IntegrationTest {
         r.add("spring.datasource.password", () -> PASSWORD);
         r.add("factory3d.data-dir", dataDir::toString);
         r.add("factory3d.live.enabled", () -> "false"); // 1초 진행은 테스트가 advance 로 직접
+        r.add("factory3d.ai.fake", () -> "true"); // 테스트는 실제 Claude 를 부르지 않음
+        r.add("factory3d.ai.master-key", () -> "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY="); // base64("0123456789abcdef" × 2) = 32바이트
     }
 
     @Autowired protected MockMvc mvc;
