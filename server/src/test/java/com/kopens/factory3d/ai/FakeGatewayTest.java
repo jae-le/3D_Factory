@@ -37,6 +37,16 @@ class FakeGatewayTest {
     }
 
     @Test
+    void truncate_는_뒤_항목을_버림() {
+        Transcript t = g.newTranscript();
+        t.addUserText("a");
+        t.addUserText("b");
+        t.addUserText("c");
+        t.truncate(1);
+        assertThat(t.messages()).isEqualTo(1);
+    }
+
+    @Test
     void 여러_쓰기_의도() {
         assertThat(secondCall("허브 2 를 90도로 돌려줘")).isEqualTo("rotate_object {\"name\":\"허브 2\",\"rot\":90.0}");
         assertThat(secondCall("허브 2 를 지워줘")).isEqualTo("delete_object {\"name\":\"허브 2\"}");

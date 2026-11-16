@@ -99,10 +99,13 @@ class ChatApiTest extends AiTestBase {
     void 거절이면_그_요청의_제안만_버림() {
         enableAi();
         ask(MOVE);
+        var tr = (FakeGateway.FakeTranscript) store.get("kim", drawing, FakeGateway.FakeTranscript::new).transcript;
+        int before = tr.entries.size();
         Rec r = ask("거절해 봐");
         assertThat(r.error).isEqualTo("요청을 처리할 수 없습니다 (사유: 시험용 거절)");
         assertThat(r.events).doesNotContain("proposal", "done");
         assertThat(store.get("kim", drawing, FakeGateway.FakeTranscript::new).changeset.items()).hasSize(1); // 앞 요청 것은 남음
+        assertThat(tr.entries).hasSize(before); // 거절한 요청은 기록에서도 지움
     }
 
     @Test

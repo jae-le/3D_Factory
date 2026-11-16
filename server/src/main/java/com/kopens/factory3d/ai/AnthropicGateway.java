@@ -65,6 +65,10 @@ public class AnthropicGateway implements ClaudeGateway {
         public int messages() {
             return messages.size();
         }
+
+        public void truncate(int n) {
+            while (messages.size() > n) messages.removeLast();
+        }
     }
 
     @Override

@@ -10,4 +10,7 @@ public interface Transcript {
     void addToolResults(List<ClaudeGateway.ToolResult> results);
 
     int messages();
+
+    /** 앞의 n 개 메시지만 남기고 뒤는 버림 */
+    void truncate(int messages);
 }

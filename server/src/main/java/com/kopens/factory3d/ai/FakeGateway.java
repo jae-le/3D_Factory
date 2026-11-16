@@ -38,6 +38,10 @@ public class FakeGateway implements ClaudeGateway {
             return entries.size();
         }
 
+        public void truncate(int n) {
+            while (entries.size() > n) entries.removeLast();
+        }
+
         String lastUserText() {
             for (int i = entries.size() - 1; i >= 0; i--) if (entries.get(i).userText() != null) return entries.get(i).userText();
             return "";

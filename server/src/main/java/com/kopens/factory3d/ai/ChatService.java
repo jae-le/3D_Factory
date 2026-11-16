@@ -78,11 +78,13 @@ public class ChatService {
             sink.error(e.getMessage());
         } catch (RuntimeException e) {
             log.error("AI 챗봇 처리 중 오류", e);
+            store.reset(user, drawingId); // 끊긴 도구 호출이 남지 않게
             sink.error("AI 챗봇 처리 중 오류가 났습니다.");
         }
     }
 
     private void run(String user, AiSettingService.Active key, DrawingDetail d, ProposalStore.Conversation c, String message, ChatSink sink) {
+        int t0 = c.transcript.messages();
         String head = c.turns == 0 ? "[도면: " + d.name() + " · 지금: " + ZonedDateTime.now(zone).format(WHEN) + "]\n" : "";
         String note = c.takeNote();
         c.transcript.addUserText(head + (note == null ? "" : note + "\n") + message);
@@ -105,6 +107,8 @@ public class ChatService {
                 cw += u.cacheWrite();
                 if (t.stop() == Stop.REFUSAL) {
                     cs.restore(snap);
+                    c.transcript.truncate(t0);
+                    c.turns--;
                     sink.error("요청을 처리할 수 없습니다 (사유: " + t.refusal() + ")");
                     return;
                 }
