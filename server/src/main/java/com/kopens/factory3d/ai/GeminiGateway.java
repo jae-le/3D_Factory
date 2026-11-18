@@ -34,7 +34,9 @@ public class GeminiGateway implements ClaudeGateway {
     private static final Set<String> REFUSALS = Set.of("SAFETY", "RECITATION", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "IMAGE_SAFETY");
 
     private final String base;
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
+    // HTTP/1.1: JDK 의 HTTP/2 로 Google 에 붙으면 응답을 못 받고 멈추는 경우가 있어 단순한 쪽으로
+    private final HttpClient http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+            .connectTimeout(Duration.ofSeconds(15)).build();
 
     public GeminiGateway() {
         this(BASE);
@@ -95,7 +97,7 @@ public class GeminiGateway implements ClaudeGateway {
         }
         body.putObject("generationConfig").put("maxOutputTokens", call.maxTokens());
 
-        HttpResponse<InputStream> res = send(call.apiKey(), call.model(), "streamGenerateContent?alt=sse", body);
+        HttpResponse<InputStream> res = send(call.apiKey(), call.model(), "streamGenerateContent?alt=sse", body, Duration.ofSeconds(90));
         List<ObjectNode> parts = new ArrayList<>();
         StringBuilder text = new StringBuilder();
         List<ToolCall> calls = new ArrayList<>();
@@ -154,7 +156,7 @@ public class GeminiGateway implements ClaudeGateway {
         body.putArray("contents").addObject().put("role", "user").putArray("parts").addObject().put("text", "ping");
         body.putObject("generationConfig").put("maxOutputTokens", 16);
         long t0 = System.nanoTime();
-        HttpResponse<InputStream> res = send(apiKey, model, "generateContent", body);
+        HttpResponse<InputStream> res = send(apiKey, model, "generateContent", body, Duration.ofSeconds(30));
         try (InputStream in = res.body()) {
             JsonNode j = JSON.readTree(in);
             return new Ping(model, (System.nanoTime() - t0) / 1_000_000, usage(model, j.get("usageMetadata")));
@@ -190,10 +192,11 @@ public class GeminiGateway implements ClaudeGateway {
         return new Usage(model, Math.max(0, prompt - cached), out, cached, 0);
     }
 
-    private HttpResponse<InputStream> send(String apiKey, String model, String method, ObjectNode body) {
+    /** wait: 응답 머리(첫 바이트)까지 기다리는 최대 시간 */
+    private HttpResponse<InputStream> send(String apiKey, String model, String method, ObjectNode body, Duration wait) {
         String url = base + "/models/" + URLEncoder.encode(model, StandardCharsets.UTF_8) + ":" + method;
         HttpRequest req = HttpRequest.newBuilder(URI.create(url))
-                .timeout(Duration.ofMinutes(5))
+                .timeout(wait)
                 .header("Content-Type", "application/json")
                 .header("x-goog-api-key", apiKey)
                 .POST(HttpRequest.BodyPublishers.ofString(JSON.writeValueAsString(body)))
@@ -201,6 +204,8 @@ public class GeminiGateway implements ClaudeGateway {
         HttpResponse<InputStream> res;
         try {
             res = http.send(req, HttpResponse.BodyHandlers.ofInputStream());
+        } catch (java.net.http.HttpTimeoutException e) {
+            throw new AiCallException(AiCallException.Kind.OTHER, "Gemini 가 " + wait.toSeconds() + "초 안에 답하지 않았습니다 — 잠시 뒤 다시 시도하세요", e);
         } catch (IOException e) {
             throw new AiCallException(AiCallException.Kind.NETWORK, e);
         } catch (InterruptedException e) {
