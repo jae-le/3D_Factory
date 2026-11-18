@@ -7,7 +7,13 @@ const usd = (v: number) => (v < 1 && v > 0 ? v.toFixed(4) : v.toFixed(2))
 
 function UsageTable({ label, head, rows }: { label: string; head: string; rows: UsageRow[] }) {
   return (
-    <table className="kp-table" aria-label={label}>
+    <table className="kp-table usage-table" aria-label={label}>
+      <colgroup>
+        <col className="usage-col-key" />
+        {Array.from({ length: 6 }, (_, i) => (
+          <col key={i} />
+        ))}
+      </colgroup>
       <thead>
         <tr>
           <th>{head}</th>
@@ -59,6 +65,7 @@ export function AiUsagePage() {
         setDay(d)
         setUser(u)
         setByModel(m)
+        setRange((cur) => (cur.from || cur.to ? cur : { from: d.from, to: d.to }))
         getAiSettings().then(setSetting).catch(() => setSetting(null))
       })
       .catch((e: Error) => setError(e.message))
@@ -135,10 +142,9 @@ export function AiUsagePage() {
           <span>종료일</span>
           <input className="kp-input" type="date" value={range.to} onChange={(e) => setRange({ ...range, to: e.target.value })} />
         </label>
-        <button className="kp-btn kp-btn-primary kp-btn-sm" type="submit">
+        <button className="kp-btn kp-btn-primary" type="submit">
           찾기
         </button>
-        {day && <span className="kp-help">{day.from} ~ {day.to}</span>}
       </form>
       <h3 className="ai-sub">일별</h3>
       {day ? <UsageTable label="일별 사용량" head="날짜" rows={day.rows} /> : <p className="kp-desc">불러오는 중…</p>}

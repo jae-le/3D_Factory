@@ -284,6 +284,8 @@
 .usage-month span { font-size: var(--kp-text-13); color: var(--kp-text-sub-2); }
 .usage-month strong { font-size: 20px; font-variant-numeric: tabular-nums; }
 .usage-month > div:not(:has(.usage-bar)) { justify-content: space-between; } /* 게이지 없는 칸: 숫자를 아래로 붙여 옆 칸과 줄 맞춤 */
+.usage-table { table-layout: fixed; width: 100%; } /* 일별·모델별·사용자별 열 위치를 같게 */
+.usage-table .usage-col-key { width: 22%; }
 .usage-month + .usage-note { margin: calc(-1 * var(--kp-sp-8)) 0 var(--kp-sp-16); }
 .usage-bar { height: 6px; border-radius: 3px; background: var(--kp-disabled-fill); overflow: hidden; }
 .usage-bar span { display: block; height: 100%; background: var(--kp-green); }
