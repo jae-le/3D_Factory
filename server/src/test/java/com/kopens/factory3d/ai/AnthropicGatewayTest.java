@@ -95,9 +95,9 @@ class AnthropicGatewayTest {
     @Test
     void 오류_종류별_한국어() {
         assertThat(new AiCallException(AiCallException.Kind.KEY, null).getMessage()).isEqualTo("API 키가 올바르지 않습니다");
-        assertThat(new AiCallException(AiCallException.Kind.NETWORK, null).getMessage()).isEqualTo("Claude 서버에 연결하지 못했습니다");
+        assertThat(new AiCallException(AiCallException.Kind.NETWORK, null).getMessage()).isEqualTo("AI 서버에 연결하지 못했습니다");
         assertThat(new AiCallException(AiCallException.Kind.OTHER, "HTTP 400", null).getMessage())
-                .isEqualTo("Claude 호출에 실패했습니다 (HTTP 400)");
+                .isEqualTo("AI 호출에 실패했습니다 (HTTP 400)");
     }
 
     @Test

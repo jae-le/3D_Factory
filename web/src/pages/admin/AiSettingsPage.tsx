@@ -5,7 +5,7 @@ import { AI_MODELS, type AiModel, type AiSettings, type AiTestResult } from '../
 import { Modal } from '../../components/Modal'
 import { when } from './format'
 
-/** 관리자 › Claude API 관리: 키(암호화 저장 · 힌트만 보임) · 연결 테스트 · 모델 · 월 한도 · 사용 여부 */
+/** 관리자 › AI API 관리: 키(암호화 저장 · 힌트만 보임) · 연결 테스트 · 모델 · 월 한도 · 사용 여부 */
 export function AiSettingsPage() {
   const [s, setS] = useState<AiSettings | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -60,14 +60,14 @@ export function AiSettingsPage() {
       .catch((err: Error) => setError(err.message))
   }
 
-  if (!s) return <section className="kp-card kp-section" aria-label="Claude API 관리">{error ? <p className="kp-error-text">{error}</p> : <p className="kp-desc">불러오는 중…</p>}</section>
+  if (!s) return <section className="kp-card kp-section" aria-label="AI API 관리">{error ? <p className="kp-error-text">{error}</p> : <p className="kp-desc">불러오는 중…</p>}</section>
   const price = AI_MODELS.find((m) => m.id === form.model)?.price
   return (
-    <section className="kp-card kp-section" aria-label="Claude API 관리">
+    <section className="kp-card kp-section" aria-label="AI API 관리">
       <div className="kp-section-head">
         <div>
-          <h2>Claude API 관리</h2>
-          <p className="kp-desc">AI 챗봇이 쓰는 Claude API 키와 모델·월 한도입니다. 키는 서버에 암호화해 저장하고 화면에는 끝 4자리만 보입니다.</p>
+          <h2>AI API 관리</h2>
+          <p className="kp-desc">AI 챗봇이 쓰는 API 키와 모델·월 한도입니다. Claude 키(sk-ant-…) 또는 Gemini 키(AIza…, Google AI Studio)를 넣고, 모델을 키에 맞게 고르세요. 키는 서버에 암호화해 저장하고 화면에는 끝 4자리만 보입니다.</p>
         </div>
       </div>
       {!s.masterKey && (
@@ -83,7 +83,7 @@ export function AiSettingsPage() {
       <form className="kp-filter" onSubmit={register}>
         <label className="kp-field">
           <span>API 키</span>
-          <input className="kp-input ai-key" type="password" autoComplete="off" placeholder="sk-ant-…" value={key} onChange={(e) => setKey(e.target.value)} />
+          <input className="kp-input ai-key" type="password" autoComplete="off" placeholder="sk-ant-… 또는 AIza…" value={key} onChange={(e) => setKey(e.target.value)} />
         </label>
         <button className="kp-btn kp-btn-primary kp-btn-sm" type="submit" disabled={!s.masterKey || !key.trim()}>
           등록
@@ -113,6 +113,7 @@ export function AiSettingsPage() {
                 {m.label}
               </option>
             ))}
+            {!AI_MODELS.some((m) => m.id === form.model) && <option value={form.model}>{form.model}</option>}
           </select>
         </label>
         <span className="kp-help">{price}</span>
@@ -135,7 +136,7 @@ export function AiSettingsPage() {
       </form>
 
       {deleting && (
-        <Modal title="Claude API 키 삭제" onClose={() => setDeleting(false)}>
+        <Modal title="AI API 키 삭제" onClose={() => setDeleting(false)}>
           <p className="kp-desc">키를 지우면 AI 챗봇을 쓸 수 없습니다. 지울까요?</p>
           <div className="kp-modal-actions">
             <button className="kp-btn kp-btn-text kp-btn-sm" onClick={() => setDeleting(false)}>

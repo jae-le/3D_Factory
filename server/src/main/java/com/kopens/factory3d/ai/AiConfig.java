@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** factory3d.ai.fake=true 면 가짜 게이트웨이 (실제 Claude 를 부르지 않음) */
+/** factory3d.ai.fake=true 면 가짜 게이트웨이 (실제 AI 를 부르지 않음). 아니면 모델 이름으로 Claude · Gemini 를 고름 */
 @Configuration
 public class AiConfig {
     private static final Logger log = LoggerFactory.getLogger(AiConfig.class);
@@ -19,7 +19,7 @@ public class AiConfig {
             log.warn("AI 챗봇이 가짜 게이트웨이로 동작합니다 (F3D_AI_FAKE=true) — 정해 둔 대본으로만 답합니다");
             return new FakeGateway();
         }
-        return new AnthropicGateway();
+        return new RoutingGateway(new AnthropicGateway(), new GeminiGateway());
     }
 
     /** 챗봇 SSE 응답을 만드는 일꾼 (가상 스레드 — 요청마다 하나) */

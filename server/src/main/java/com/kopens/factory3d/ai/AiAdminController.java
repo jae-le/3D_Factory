@@ -7,7 +7,7 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-/** 관리자 › Claude API 관리 (ADMIN — SecurityConfig 의 /api/admin/**) */
+/** 관리자 › AI API 관리 (ADMIN — SecurityConfig 의 /api/admin/**) */
 @RestController
 @RequestMapping("/api/admin/ai")
 public class AiAdminController {
@@ -44,7 +44,7 @@ public class AiAdminController {
             usage.record(auth.getName(), null, u.model(), u.input(), u.output(), u.cacheRead(), u.cacheWrite(), "test");
             return new TestResult(true, p.model(), p.latencyMs(), null);
         } catch (AiCallException e) {
-            log.warn("Claude 호출 실패 kind={} model={}", e.kind(), a.model(), e.getCause());
+            log.warn("AI 호출 실패 kind={} model={}", e.kind(), a.model(), e.getCause());
             return new TestResult(false, a.model(), null, e.getMessage());
         }
     }

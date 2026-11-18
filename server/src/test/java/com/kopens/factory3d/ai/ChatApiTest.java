@@ -160,7 +160,7 @@ class ChatApiTest extends AiTestBase {
 
     @Test
     void 호출_오류와_꺼짐은_한국어로() {
-        assertThat(ask("안녕").error).isEqualTo("Claude API 키가 등록되지 않았습니다 (관리자 › Claude API 관리)");
+        assertThat(ask("안녕").error).isEqualTo("AI API 키가 등록되지 않았습니다 (관리자 › AI API 관리)");
         enableAi();
         Rec r = ask("오류 내 봐");
         assertThat(r.error).isEqualTo("잠시 뒤 다시 시도하세요 (요청이 많습니다)");

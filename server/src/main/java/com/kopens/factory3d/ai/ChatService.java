@@ -77,7 +77,7 @@ public class ChatService {
                 c.lock.unlock();
             }
         } catch (AiCallException e) {
-            log.warn("Claude 호출 실패 kind={} model={}", e.kind(), model[0], e.getCause());
+            log.warn("AI 호출 실패 kind={} model={}", e.kind(), model[0], e.getCause());
             sink.error(e.getMessage());
         } catch (BadRequestException e) {
             sink.error(e.getMessage());

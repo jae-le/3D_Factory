@@ -53,7 +53,7 @@ class AiUsageApiTest extends AiTestBase {
     @Test
     void 연결_테스트() throws Exception {
         mvc.perform(post("/api/admin/ai/test").with(ADMIN).with(csrf())).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("Claude API 키가 등록되지 않았습니다."));
+                .andExpect(jsonPath("$.detail").value("AI API 키가 등록되지 않았습니다."));
         enableAi();
         mvc.perform(post("/api/admin/ai/test").with(ADMIN).with(csrf())).andExpect(status().isOk())
                 .andExpect(jsonPath("$.ok").value(true))

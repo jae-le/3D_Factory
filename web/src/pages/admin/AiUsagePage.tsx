@@ -72,7 +72,7 @@ export function AiUsagePage() {
       <div className="kp-section-head">
         <div>
           <h2>AI 사용량</h2>
-          <p className="kp-desc">Claude 호출 수·토큰·추정 비용입니다. 이번 달 비용이 한도에 닿으면 AI 챗봇이 멈춥니다.</p>
+          <p className="kp-desc">AI 호출 수·토큰·추정 비용입니다 (Gemini 무료 등급은 비용 0). 이번 달 비용이 한도에 닿으면 AI 챗봇이 멈춥니다.</p>
         </div>
       </div>
       {error && <p className="kp-error-text">{error}</p>}

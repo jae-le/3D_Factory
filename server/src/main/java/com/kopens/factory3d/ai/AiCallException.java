@@ -23,8 +23,8 @@ public class AiCallException extends RuntimeException {
         return switch (kind) {
             case KEY -> "API 키가 올바르지 않습니다";
             case RATE -> "잠시 뒤 다시 시도하세요 (요청이 많습니다)";
-            case NETWORK -> "Claude 서버에 연결하지 못했습니다";
-            case OTHER -> "Claude 호출에 실패했습니다" + (detail == null ? "" : " (" + detail + ")");
+            case NETWORK -> "AI 서버에 연결하지 못했습니다";
+            case OTHER -> "AI 호출에 실패했습니다" + (detail == null ? "" : " (" + detail + ")");
         };
     }
 }

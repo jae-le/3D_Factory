@@ -69,7 +69,10 @@ class AiSettingApiTest extends IntegrationTest {
     @Test
     void 모델과_한도_검사() throws Exception {
         putJson("/api/admin/ai", "{\"model\":\"claude-opus-4-8\"}", ADMIN).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("모델은 claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5 중 하나입니다."));
+                .andExpect(jsonPath("$.detail").value("모델은 claude-opus-5-5, claude-sonnet-5-5, claude-haiku-5-5 또는 gemini-로 시작하는 이름입니다."));
+        putJson("/api/admin/ai", "{\"model\":\"gemini-2.5 flash\"}", ADMIN).andExpect(status().isBadRequest());
+        putJson("/api/admin/ai", "{\"model\":\"gemini-2.5-flash\"}", ADMIN).andExpect(status().isOk())
+                .andExpect(jsonPath("$.model").value("gemini-2.5-flash")); // DB 검사(V7)도 통과
         putJson("/api/admin/ai", "{\"monthlyLimitUsd\":-1}", ADMIN).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("월 한도는 0 이상 USD 로 입력하세요."));
         putJson("/api/admin/ai", "{\"model\":\"claude-sonnet-5-5\",\"monthlyLimitUsd\":12.5}", ADMIN).andExpect(status().isOk())

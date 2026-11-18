@@ -22,4 +22,9 @@ class PricingTest {
         assertThat(c).isEqualByComparingTo("0.011000"); // 1200×4 + 60×20 + 1000×5 = 11000 / 1M
         assertThat(Pricing.cost("claude-opus-4-8", 1_000_000, 0, 0, 0)).isEqualByComparingTo("4"); // fallback 모델 등
     }
+
+    @Test
+    void Gemini_무료_등급은_비용_0() {
+        assertThat(Pricing.cost("gemini-2.5-flash", 1_000_000, 1_000_000, 0, 0)).isEqualByComparingTo("0");
+    }
 }

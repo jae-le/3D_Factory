@@ -20,7 +20,7 @@ export function AdminLayout() {
           <NavLink to="/admin/drawings">도면 관리</NavLink>
           <NavLink to="/admin/models">객체관리</NavLink>
           <NavLink to="/admin/stations">공정·생산 기준정보</NavLink>
-          <NavLink to="/admin/ai">Claude API 관리</NavLink>
+          <NavLink to="/admin/ai">AI API 관리</NavLink>
           <NavLink to="/admin/changes">변경 이력</NavLink>
           <NavLink to="/admin/ai-usage">AI 사용량</NavLink>
         </nav>

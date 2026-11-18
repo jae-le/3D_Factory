@@ -30,7 +30,7 @@ function show(path: string, handler: (url: string, method: string, body: unknown
 describe('관리자 › AI', () => {
   afterEach(() => vi.unstubAllGlobals())
 
-  it('Claude API 관리: 키 등록 → 연결 테스트 → 모델·한도·사용 저장', async () => {
+  it('AI API 관리: 키 등록 → 연결 테스트 → 모델·한도·사용 저장', async () => {
     let cur: Record<string, unknown> = { ...SETTINGS }
     const calls = show('/admin/ai', (url, method, body) => {
       if (url === '/api/admin/ai' && method === 'GET') return json(200, cur)
@@ -58,7 +58,7 @@ describe('관리자 › AI', () => {
     expect(calls.find((c) => c.url === '/api/admin/ai' && c.method === 'PUT')?.body).toEqual({ model: 'claude-sonnet-5-5', monthlyLimitUsd: 12.5, enabled: true })
   })
 
-  it('Claude API 관리: 마스터 키가 없으면 경고 · 키 삭제는 확인 창', async () => {
+  it('AI API 관리: 마스터 키가 없으면 경고 · 키 삭제는 확인 창', async () => {
     const calls = show('/admin/ai', (url, method) => {
       if (url === '/api/admin/ai' && method === 'GET') return json(200, { ...SETTINGS, masterKey: false, hasKey: true, keyHint: 'sk-ant-…abcd' })
       if (url === '/api/admin/ai/key' && method === 'DELETE') return json(200, { ...SETTINGS, masterKey: false })
@@ -67,7 +67,7 @@ describe('관리자 › AI', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('F3D_AI_MASTER_KEY 가 설정되지 않아 키를 저장할 수 없습니다')
     expect(screen.getByRole('button', { name: '등록' })).toBeDisabled()
     fireEvent.click(screen.getByRole('button', { name: '키 삭제' }))
-    const dialog = screen.getByRole('dialog', { name: 'Claude API 키 삭제' })
+    const dialog = screen.getByRole('dialog', { name: 'AI API 키 삭제' })
     fireEvent.click(within(dialog).getByRole('button', { name: '삭제' }))
     expect(await screen.findByText('미등록')).toBeInTheDocument()
     expect(calls.some((c) => c.url === '/api/admin/ai/key' && c.method === 'DELETE')).toBe(true)

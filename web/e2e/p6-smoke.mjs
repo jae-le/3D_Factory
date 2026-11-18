@@ -50,12 +50,12 @@ try {
   const rail = page.getByRole('button', { name: 'AI 챗봇' })
   await page.waitForFunction(() => document.querySelector('button[aria-label="AI 챗봇"]')?.getAttribute('title')?.includes('—'))
   const title = (await rail.getAttribute('title')) ?? ''
-  if (!(await rail.isDisabled()) || !title.includes('Claude API 키가 등록되지 않았습니다')) fail(`키 없을 때 버튼: disabled=${await rail.isDisabled()} title=${title}`)
+  if (!(await rail.isDisabled()) || !title.includes('AI API 키가 등록되지 않았습니다')) fail(`키 없을 때 버튼: disabled=${await rail.isDisabled()} title=${title}`)
   await shot('p6-1-disabled')
 
-  // 2. 관리자 › Claude API 관리: 키 등록 · 사용 켬 · 연결 테스트
+  // 2. 관리자 › AI API 관리: 키 등록 · 사용 켬 · 연결 테스트
   await page.goto(base + '/admin/ai')
-  await page.getByRole('heading', { name: 'Claude API 관리' }).waitFor()
+  await page.getByRole('heading', { name: 'AI API 관리' }).waitFor()
   await page.getByLabel('API 키').fill('sk-ant-api03-smoke-test-0000000abcd')
   await page.getByRole('button', { name: '등록' }).click()
   await page.getByText('등록됨 sk-ant-…abcd').waitFor()

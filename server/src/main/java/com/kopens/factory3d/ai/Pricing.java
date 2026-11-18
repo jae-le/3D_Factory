@@ -16,6 +16,7 @@ public final class Pricing {
     private Pricing() {}
 
     public static BigDecimal cost(String model, long input, long output, long cacheRead, long cacheWrite) {
+        if (RoutingGateway.isGemini(model)) return BigDecimal.ZERO.setScale(6); // Gemini 무료 등급: 비용 0 (토큰만 셈)
         Rate r = RATES.getOrDefault(model, RATES.get("claude-opus-5-5"));
         double usd = (input * r.input() + output * r.output() + cacheRead * r.cacheRead() + cacheWrite * r.cacheWrite()) / 1_000_000d;
         return BigDecimal.valueOf(usd).setScale(6, RoundingMode.HALF_UP);

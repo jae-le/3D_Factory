@@ -75,7 +75,7 @@ describe('3D 공장 화면 · AI 챗봇', () => {
   it('키가 없으면 버튼 꺼짐 + 이유', async () => {
     show(OPERATOR, { enabled: false, reason: 'no-key' })
     const btn = screen.getByRole('button', { name: 'AI 챗봇' })
-    await waitFor(() => expect(btn).toHaveAttribute('title', 'AI 챗봇 — Claude API 키가 등록되지 않았습니다 (관리자 › Claude API 관리)'))
+    await waitFor(() => expect(btn).toHaveAttribute('title', 'AI 챗봇 — AI API 키가 등록되지 않았습니다 (관리자 › AI API 관리)'))
     expect(btn).toBeDisabled()
   })
 
