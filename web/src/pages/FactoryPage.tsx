@@ -22,6 +22,8 @@ import { EditTag } from '../objects/EditTag'
 import { cellSize, editCells, editTag, rectOf, snapToCells } from '../objects/grid'
 import { nextName } from '../objects/match'
 import { ObjectInfo } from '../objects/ObjectInfo'
+import { MultiSelectCard } from '../objects/MultiSelectCard'
+import { alignMoves, boxOf, type AlignOp } from '../objects/align'
 import { ObjectPanel } from '../objects/ObjectPanel'
 import { BOX_SIZE, type ModelInfo, type Placement } from '../objects/types'
 import { useModels } from '../objects/useModels'
@@ -81,8 +83,10 @@ export function FactoryPage() {
     placements.reload()
     reloadDrawing()
   })
-  const { add, update, remove, undo, redo } = placements
-  const [selId, setSelId] = useState<number | null>(null)
+  const { add, update, updateMany, remove, undo, redo } = placements
+  const [selIds, setSelIds] = useState<number[]>([]) // Shift+클릭으로 여러 개
+  const selId = selIds.length === 1 ? selIds[0] : null
+  const setSelId = (id: number | null) => setSelIds(id == null ? [] : [id])
   const [editingId, setEditingId] = useState<number | null>(null)
   const [placing, setPlacing] = useState<ModelInfo | null>(null)
   const [dragPos, setDragPos] = useState<DragPos | null>(null)
@@ -174,7 +178,9 @@ export function FactoryPage() {
   // 3D 와 맞추기
   useEffect(() => scene?.setObjects(sceneObjects), [scene, sceneObjects])
   useEffect(() => scene?.setPreview(preview), [scene, preview])
-  useEffect(() => scene?.setSelected(selected?.id ?? null), [scene, selected?.id])
+  const multi = selIds.filter((id) => rows.some((p) => p.id === id))
+  const multiKey = multi.join(',')
+  useEffect(() => scene?.setSelected(multiKey ? multiKey.split(',').map(Number) : null), [scene, multiKey])
   useEffect(() => scene?.setEditing(editing), [scene, editing])
   useEffect(() => {
     if (!scene) return
@@ -184,7 +190,13 @@ export function FactoryPage() {
   useEffect(() => {
     if (!scene) return
     scene.setObjectEvents({
-      onSelect: (id) => {
+      onSelect: (id, additive) => {
+        if (additive) {
+          // Shift+클릭: 더하거나 빼기 (빈 곳은 그대로)
+          if (id != null) setSelIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+          setEditingId(null)
+          return
+        }
         setSelId(id)
         setEditingId((e) => (e === id ? e : null))
       },
@@ -275,6 +287,19 @@ export function FactoryPage() {
     tag = editTag(rect, editCells(rect, others, c), c)
   }
 
+  const align = (op: AlignOp) => {
+    const boxes = rows.filter((p) => multi.includes(p.id)).map((p) => boxOf(p.id, p, sizeOf(p, byId)))
+    const moves = alignMoves(boxes, op)
+    if (moves.length > 0) void updateMany(moves.map((m) => ({ id: m.id, patch: { x: m.x, y: m.y } })))
+  }
+  const multiCard = multi.length >= 2 && (
+    <MultiSelectCard
+      names={multi.map((id) => rows.find((p) => p.id === id)?.name ?? '')}
+      canEdit={canEdit}
+      onAlign={align}
+      onClose={() => setSelIds([])}
+    />
+  )
   const objectInfo = selected && (
     <ObjectInfo
       key={`${selected.id}:${selected.name}`}
@@ -367,7 +392,7 @@ export function FactoryPage() {
           <FactoryView plan={detail?.plan ?? null} planKey={detail?.id} view={pref.mode} quality={pref.quality} onScene={setScene} />
           {state.kind === 'error' && <p className="empty-state" role="alert">{state.error.message}</p>}
           {detail && <DrawingTools scene={scene} plan={detail.plan} canEdit={canEdit} onSave={onSave} onToolChange={onToolChange} />}
-          {objectInfo}
+          {multiCard || objectInfo}
           {tag && <EditTag text={tag} />}
           {toast && <p className={tag ? 'toast raised' : 'toast'} role="status">{toast}</p>}
           {detail && (

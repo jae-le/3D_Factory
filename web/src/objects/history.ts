@@ -4,6 +4,7 @@ export type Change =
   | { kind: 'add'; placement: Placement }
   | { kind: 'delete'; placement: Placement }
   | { kind: 'update'; id: number; before: PlacementPatch; after: PlacementPatch }
+  | { kind: 'batch'; items: { id: number; before: PlacementPatch; after: PlacementPatch }[] } // 여러 개 정렬 등: 되돌리기 한 번
 
 /** 이 화면 세션의 편집 기록 (되돌리기·다시 하기). 실제 요청은 호출자가 보냄 */
 export class History {
@@ -35,7 +36,15 @@ export class History {
 
   remap(oldId: number, newId: number): void {
     const fix = (c: Change): Change =>
-      c.kind === 'update' ? (c.id === oldId ? { ...c, id: newId } : c) : c.placement.id === oldId ? { ...c, placement: { ...c.placement, id: newId } } : c
+      c.kind === 'batch'
+        ? { ...c, items: c.items.map((i) => (i.id === oldId ? { ...i, id: newId } : i)) }
+        : c.kind === 'update'
+          ? c.id === oldId
+            ? { ...c, id: newId }
+            : c
+          : c.placement.id === oldId
+            ? { ...c, placement: { ...c.placement, id: newId } }
+            : c
     this.done = this.done.map(fix)
     this.undone = this.undone.map(fix)
   }

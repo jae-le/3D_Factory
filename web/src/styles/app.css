@@ -158,6 +158,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .object-info-actions button:hover { background: #ffffff12; }
 .object-info-actions button.on { border-color: var(--primary); color: #9cc3ff; }
 .object-info-actions button.danger { margin-left: auto; color: #fca5a5; }
+.object-info .multi-count { flex: 1; font-size: var(--kp-text-15, 15px); }
+.object-info .multi-names { margin: 0; color: var(--muted); font-size: var(--kp-text-13); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.object-info .multi-help { margin: 0; color: var(--muted); font-size: 12px; }
+.multi-align { display: flex; flex-wrap: wrap; gap: 8px; }
+.multi-align-group { display: flex; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); overflow: hidden; }
+.multi-align-group button { display: grid; place-items: center; width: 34px; height: 32px; border: 0; background: none; color: var(--text); }
+.multi-align-group button + button { border-left: 1px solid var(--line-strong); }
+.multi-align-group button:hover:not(:disabled) { background: #ffffff14; }
+.multi-align-group button:disabled { opacity: 0.35; }
 .edit-tag { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); margin: 0; padding: 6px 12px; border: 1px solid var(--line-strong); border-radius: var(--kp-radius-sm); background: color-mix(in srgb, var(--panel) 92%, transparent); color: var(--text); font-weight: 600; font-size: var(--kp-text-13); }
 .toast.raised { bottom: 64px; }
 

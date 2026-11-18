@@ -7,7 +7,7 @@ import { instance } from './modelCache'
 /** 3D 에 그릴 배치 하나 (plan 좌표 m, rot 도·반시계, size 는 모델 또는 BOX_SIZE) */
 export interface SceneObject { id: number; name: string; url: string | null; sizeX: number; sizeY: number; sizeZ: number; x: number; y: number; rot: number; label?: string | null }
 export interface ObjectEvents {
-  onSelect(id: number | null): void // 클릭으로 고름 (빈 곳 클릭 = null)
+  onSelect(id: number | null, additive?: boolean): void // 클릭으로 고름 (빈 곳 클릭 = null, additive = Shift 로 더하거나 빼기)
   onDrag?(id: number, x: number, y: number): void // 편집 끌기 중 (plan 좌표, 격자 붙음)
   onDrop?(id: number, x: number, y: number): void // 끌기 끝
   onDragCancel?(id: number): void // 끌기 끊김 → 원래 자리
@@ -45,8 +45,8 @@ export class ObjectLayer {
   private load: (url: string) => Promise<THREE.Object3D>
   private bounds = { w: 0, h: 0 }
   private items = new Map<number, Entry>()
-  private selected: number | null = null
-  private outline: THREE.LineLoop | null = null
+  private selected: number[] = []
+  private outlines = new Map<number, THREE.LineLoop>()
   private editing: number | null = null
   private stats: { cells: number; hits: number } | null = null
   private ghost: Ghost | null = null
@@ -110,29 +110,33 @@ export class ObjectLayer {
       if (e.key !== shapeKey(o)) {
         e.key = shapeKey(o)
         this.build(e)
-        if (this.selected === o.id) this.setSelected(o.id)
+        if (this.selected.includes(o.id)) this.setSelected(this.selected)
       }
       if (prev.x !== o.x || prev.y !== o.y || prev.rot !== o.rot) this.pose(e.group, o.x, o.y, o.rot)
     }
-    if (this.selected != null && !this.items.has(this.selected)) this.setSelected(null)
+    if (this.selected.some((id) => !this.items.has(id))) this.setSelected(this.selected.filter((id) => this.items.has(id)))
     this.refreshEdit()
   }
 
-  setSelected(id: number | null): void {
-    if (this.outline) {
-      this.outline.removeFromParent()
-      this.outline.geometry.dispose()
-      this.outline = null
+  /** 고른 객체(하나·여럿·없음)에 바닥 테두리 */
+  setSelected(sel: number | number[] | null): void {
+    for (const line of this.outlines.values()) {
+      line.removeFromParent()
+      line.geometry.dispose()
     }
-    this.selected = id
-    const e = id == null ? undefined : this.items.get(id)
-    if (!e) return
-    const hx = e.o.sizeX / 2 + SELECT_PAD, hz = e.o.sizeY / 2 + SELECT_PAD, y = 0.05
-    const pts = [new THREE.Vector3(-hx, y, -hz), new THREE.Vector3(hx, y, -hz), new THREE.Vector3(hx, y, hz), new THREE.Vector3(-hx, y, hz)]
-    const line = (this.outline = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), this.outlineMat))
-    line.renderOrder = 9
-    line.raycast = noRaycast
-    e.group.add(line)
+    this.outlines.clear()
+    this.selected = sel == null ? [] : Array.isArray(sel) ? [...sel] : [sel]
+    for (const id of this.selected) {
+      const e = this.items.get(id)
+      if (!e) continue
+      const hx = e.o.sizeX / 2 + SELECT_PAD, hz = e.o.sizeY / 2 + SELECT_PAD, y = 0.05
+      const pts = [new THREE.Vector3(-hx, y, -hz), new THREE.Vector3(hx, y, -hz), new THREE.Vector3(hx, y, hz), new THREE.Vector3(-hx, y, hz)]
+      const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), this.outlineMat)
+      line.renderOrder = 9
+      line.raycast = noRaycast
+      e.group.add(line)
+      this.outlines.set(id, line)
+    }
   }
 
   setEditing(id: number | null): void {
@@ -350,7 +354,7 @@ export class ObjectLayer {
   }
 
   private remove(id: number, e: Entry) {
-    if (this.selected === id) this.setSelected(null)
+    if (this.selected.includes(id)) this.setSelected(this.selected.filter((x) => x !== id))
     e.token = -1
     this.clearBody(e)
     e.group.removeFromParent()

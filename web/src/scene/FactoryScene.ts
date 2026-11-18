@@ -31,7 +31,7 @@ export interface PickSource {
 /** 배치 객체 표시·선택·배치·편집 끌기 (React 쪽 배치 화면이 부름) */
 export interface ObjectHost {
   setObjects(list: SceneObject[]): void
-  setSelected(id: number | null): void
+  setSelected(sel: number | number[] | null): void
   setEditing(id: number | null): void
   setPlacing(g: GhostSpec | null): void
   setObjectEvents(e: ObjectEvents | null): void
@@ -297,8 +297,8 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost,
     if (this.drag && !this.objectLayer.object(this.drag.id)) this.endDrag()
   }
 
-  setSelected(id: number | null): void {
-    this.objectLayer.setSelected(id)
+  setSelected(sel: number | number[] | null): void {
+    this.objectLayer.setSelected(sel)
   }
 
   setEditing(id: number | null): void {
@@ -752,7 +752,7 @@ export class FactoryScene implements PickSource, ObjectHost, DashHost, WalkHost,
     }
     if (!events || !this.rayAt(ev)) return
     this.root.updateMatrixWorld(true)
-    events.onSelect(this.objectLayer.pick(this.ray))
+    events.onSelect(this.objectLayer.pick(this.ray), ev.shiftKey)
   }
 
   private onDblClick = (ev: MouseEvent) => {

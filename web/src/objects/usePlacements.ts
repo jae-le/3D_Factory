@@ -140,6 +140,34 @@ export function usePlacements(drawingId: number | null) {
     [run, bump, setRows, alive],
   )
 
+  /** 여러 개를 한 번에 (정렬 등): 차례로 저장하고 기록은 묶음 하나 */
+  const updateMany = useCallback(
+    (list: { id: number; patch: PlacementPatch }[]) =>
+      run(async (drawing) => {
+        const items: { id: number; before: PlacementPatch; after: PlacementPatch }[] = []
+        try {
+          for (const { id, patch } of list) {
+            const cur = rowsRef.current.find((p) => p.id === id)
+            if (!cur) continue
+            const before: PlacementPatch = {}
+            if (patch.x !== undefined) before.x = cur.x
+            if (patch.y !== undefined) before.y = cur.y
+            if (patch.rot !== undefined) before.rot = cur.rot
+            const res = await updatePlacement(id, patch)
+            if (!alive(drawing)) return
+            setRows(drawing, (l) => l.map((p) => (p.id === id ? res : p)))
+            items.push({ id, before, after: patch })
+          }
+        } finally {
+          if (items.length > 0 && alive(drawing)) {
+            history.current.push({ kind: 'batch', items })
+            bump()
+          }
+        }
+      }),
+    [run, bump, setRows, alive],
+  )
+
   const remove = useCallback(
     (id: number) =>
       run(async (drawing) => {
@@ -181,6 +209,10 @@ export function usePlacements(drawingId: number | null) {
         const c = history.current.undo()
         bump()
         if (!c) return
+        if (c.kind === 'batch') {
+          for (const i of [...c.items].reverse()) await patch(drawing, i.id, i.before)
+          return
+        }
         if (c.kind === 'add') await erase(drawing, c.placement.id)
         else if (c.kind === 'delete') await recreate(drawing, c.placement)
         else await patch(drawing, c.id, c.before)
@@ -194,6 +226,10 @@ export function usePlacements(drawingId: number | null) {
         const c = history.current.redo()
         bump()
         if (!c) return
+        if (c.kind === 'batch') {
+          for (const i of c.items) await patch(drawing, i.id, i.after)
+          return
+        }
         if (c.kind === 'add') await recreate(drawing, c.placement)
         else if (c.kind === 'delete') await erase(drawing, c.placement.id)
         else await patch(drawing, c.id, c.after)
@@ -210,5 +246,5 @@ export function usePlacements(drawingId: number | null) {
   const mine = flags.id === drawingId
   const loading = drawingId !== null && data?.id !== drawingId && err?.id !== drawingId
   const error = err && err.id === drawingId ? err.message : null
-  return { list, loading, error, add, update, remove, undo, redo, canUndo: mine && flags.canUndo, canRedo: mine && flags.canRedo, reload }
+  return { list, loading, error, add, update, updateMany, remove, undo, redo, canUndo: mine && flags.canUndo, canRedo: mine && flags.canRedo, reload }
 }

@@ -155,6 +155,23 @@ describe('usePlacements', () => {
     expect(s.rows.get(1)).toMatchObject({ x: 9 })
   })
 
+  it('여러 개 한 번에 옮기면 되돌리기 한 번에 모두 원래대로', async () => {
+    const s = fakeServer()
+    s.rows.set(2, { id: 2, name: '허브 2', x: 4, y: 0, rot: 0, modelId: 5 })
+    vi.stubGlobal('fetch', s.fetch)
+    const { result } = renderHook(() => usePlacements(3))
+    await waitFor(() => expect(result.current.list).toHaveLength(2))
+    await act(() => result.current.updateMany([{ id: 1, patch: { x: 10, y: 1 } }, { id: 2, patch: { x: 10, y: 3 } }]))
+    expect(s.rows.get(1)).toMatchObject({ x: 10, y: 1 })
+    expect(s.rows.get(2)).toMatchObject({ x: 10, y: 3 })
+    await act(() => result.current.undo())
+    expect(s.rows.get(1)).toMatchObject({ x: 0, y: 0 })
+    expect(s.rows.get(2)).toMatchObject({ x: 4, y: 0 })
+    expect(result.current.canUndo).toBe(false)
+    await act(() => result.current.redo())
+    expect(s.rows.get(2)).toMatchObject({ x: 10, y: 3 })
+  })
+
   it('도면이 없으면 빈 목록', () => {
     const { result } = renderHook(() => usePlacements(null))
     expect(result.current.list).toEqual([])
