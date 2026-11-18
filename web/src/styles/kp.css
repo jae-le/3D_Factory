@@ -283,6 +283,7 @@
 .usage-month > div { display: flex; flex-direction: column; gap: var(--kp-sp-4); padding: var(--kp-sp-12) var(--kp-sp-16); border: 1px solid var(--kp-border); border-radius: var(--kp-radius-sm); }
 .usage-month span { font-size: var(--kp-text-13); color: var(--kp-text-sub-2); }
 .usage-month strong { font-size: var(--kp-text-16); font-variant-numeric: tabular-nums; }
+.usage-month > div:not(:has(.usage-bar)) { justify-content: space-between; } /* 게이지 없는 칸: 숫자를 아래로 붙여 옆 칸과 줄 맞춤 */
 .usage-month + .usage-note { margin: calc(-1 * var(--kp-sp-8)) 0 var(--kp-sp-16); }
 .usage-bar { height: 6px; border-radius: 3px; background: var(--kp-disabled-fill); overflow: hidden; }
 .usage-bar span { display: block; height: 100%; background: var(--kp-green); }
