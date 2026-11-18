@@ -17,10 +17,24 @@ public final class PlanEdits {
         return -1;
     }
 
-    /** 도면 글자(DXF TEXT) i 번째. id 가 없어 배열 순서로 가리킴 (글자 바꾸기는 순서를 바꾸지 않음) */
-    public static ObjectNode text(ObjectNode plan, int index) {
-        JsonNode t = plan.path("texts").path(index);
-        return t instanceof ObjectNode o ? o : null;
+    /** 도면 글자 id: 있으면 그 값, 없으면 지금 순서 "t<i>" (처음 고칠 때 이 값으로 굳힘 → 지워도 다른 글자 id 가 안 밀림) */
+    public static String textId(JsonNode t, int index) {
+        String id = t.path("id").asString("");
+        return id.isEmpty() ? "t" + index : id;
+    }
+
+    public static ArrayNode texts(ObjectNode plan) {
+        ArrayNode a = plan.get("texts") instanceof ArrayNode x ? x : plan.putArray("texts");
+        for (int i = 0; i < a.size(); i++) if (a.get(i) instanceof ObjectNode o && o.path("id").asString("").isEmpty()) o.put("id", "t" + i);
+        return a;
+    }
+
+    /** id 로 글자 위치 (없으면 -1). 옛 기록의 index 도 받음 */
+    public static int textIndex(ObjectNode plan, JsonNode ref) {
+        ArrayNode a = texts(plan);
+        String id = ref.has("id") ? ref.path("id").asString("") : "t" + ref.path("index").asInt(-1);
+        for (int i = 0; i < a.size(); i++) if (id.equals(a.get(i).path("id").asString())) return i;
+        return -1;
     }
 
     public static ObjectNode zone(ObjectNode plan, String id) {

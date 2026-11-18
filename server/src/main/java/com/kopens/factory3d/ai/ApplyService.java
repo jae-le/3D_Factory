@@ -177,10 +177,21 @@ public class ApplyService {
                 parts.remove(i);
             }
             case "plan.text.rename" -> {
-                ObjectNode t = PlanEdits.text(plan, it.after().path("index").asInt(-1));
-                if (t == null) return "글자가 이미 없습니다";
+                int i = PlanEdits.textIndex(plan, it.after());
+                if (i < 0) return "글자가 이미 없습니다";
+                ObjectNode t = (ObjectNode) PlanEdits.texts(plan).get(i);
                 if (!t.path("str").asString("").equals(text(it.before(), "str"))) return CHANGED;
                 t.put("str", text(it.after(), "str"));
+            }
+            case "plan.text.add" -> {
+                if (PlanEdits.textIndex(plan, it.after()) >= 0) return "같은 id 의 글자가 이미 있습니다";
+                PlanEdits.texts(plan).add(it.after().deepCopy());
+            }
+            case "plan.text.delete" -> {
+                int i = PlanEdits.textIndex(plan, it.before());
+                if (i < 0) return "글자가 이미 없습니다";
+                if (!PlanEdits.texts(plan).get(i).path("str").asString("").equals(text(it.before(), "str"))) return CHANGED;
+                PlanEdits.texts(plan).remove(i);
             }
             case "plan.zone.rename" -> {
                 ObjectNode z = PlanEdits.zone(plan, text(it.after(), "id"));

@@ -18,7 +18,7 @@ class SceneToolsTest extends AiTestBase {
     @Test
     void 도구_목록은_9개_strict_스키마() {
         assertThat(tools.specs()).extracting(ClaudeGateway.ToolSpec::name).containsExactly("get_scene", "move_object", "rotate_object",
-                "add_object", "delete_object", "rename_object", "set_station", "edit_partition", "rename_zone", "rename_text");
+                "add_object", "delete_object", "rename_object", "set_station", "edit_partition", "rename_zone", "add_text", "delete_text", "rename_text");
         assertThat(tools.specs()).allSatisfy(s -> assertThat(s.inputSchemaJson()).contains("\"additionalProperties\":false"));
     }
 
@@ -140,9 +140,25 @@ class SceneToolsTest extends AiTestBase {
         assertThat(run("rename_text", "{\"text\":\"없는 글자\",\"newText\":\"x\"}").isError()).isTrue();
         assertThat(run("rename_text", "{\"text\":\"Station (미표기)\",\"newText\":\"Main Station 1-2\"}").isError()).isFalse();
         assertThat(cs.items()).extracting(Changeset.Item::kind).containsExactly("plan.text.rename");
-        assertThat(cs.items().getFirst().targetKey()).isEqualTo("text:0");
+        assertThat(cs.items().getFirst().targetKey()).isEqualTo("text:t0");
         assertThat(run("get_scene", "{}").content()).contains("\"text\":\"Main Station 1-2\"");
         run("rename_text", "{\"id\":\"t0\",\"newText\":\"Station (미표기)\"}"); // 원래대로 → 제안 지움
         assertThat(cs.items()).isEmpty();
+    }
+
+    @Test
+    void 도면_글자_추가_삭제_제안() {
+        assertThat(run("add_text", "{\"text\":\"출입구\",\"x\":99,\"y\":1}").isError()).isTrue(); // 도면 밖
+        assertThat(run("add_text", "{\"text\":\"출입구\",\"x\":12,\"y\":4}").isError()).isFalse();
+        assertThat(cs.items().getFirst().after().toString()).contains("\"id\":\"t2\"", "\"layer\":\"STATION\"", "\"h\":0.8");
+        assertThat(run("get_scene", "{}").content()).contains("\"id\":\"t2\",\"text\":\"출입구\"");
+        run("rename_text", "{\"id\":\"t2\",\"newText\":\"정문\"}"); // 아직 안 넣은 글자 → 추가 제안을 고침
+        assertThat(cs.items()).extracting(Changeset.Item::kind).containsExactly("plan.text.add");
+        assertThat(cs.items().getFirst().after().path("str").asString()).isEqualTo("정문");
+        run("delete_text", "{\"id\":\"t2\"}"); // 추가 제안 취소
+        assertThat(cs.items()).isEmpty();
+        assertThat(run("delete_text", "{\"text\":\"출하\"}").isError()).isFalse();
+        assertThat(cs.items().getFirst().kind()).isEqualTo("plan.text.delete");
+        assertThat(run("get_scene", "{}").content()).doesNotContain("출하");
     }
 }

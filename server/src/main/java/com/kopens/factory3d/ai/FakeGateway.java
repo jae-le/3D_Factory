@@ -15,6 +15,8 @@ public class FakeGateway implements ClaudeGateway {
     static final Pattern ADD = Pattern.compile("(.+?)\\s*[을를]\\s*\\(\\s*([0-9.]+)\\s*,\\s*([0-9.]+)\\s*\\)\\s*에\\s*추가");
     static final Pattern TAKT = Pattern.compile("공정\\s+(.+?)\\s*택타임\\s*([0-9]+(?:\\.[0-9]+)?)\\s*분");
     static final Pattern TEXT = Pattern.compile("글자\\s*'(.+?)'\\s*[을를]\\s*'(.+?)'\\s*(?:으로|로)\\s*바꿔");
+    static final Pattern TEXT_ADD = Pattern.compile("글자\\s*'(.+?)'\\s*[을를]\\s*\\(\\s*([0-9.]+)\\s*,\\s*([0-9.]+)\\s*\\)\\s*에\\s*써");
+    static final Pattern TEXT_DEL = Pattern.compile("글자\\s*'(.+?)'\\s*[을를]\\s*(?:지워|삭제)");
     static final Pattern WALL = Pattern.compile("가벽\\s*\\(\\s*([0-9.]+)\\s*,\\s*([0-9.]+)\\s*\\)\\s*-\\s*\\(\\s*([0-9.]+)\\s*,\\s*([0-9.]+)\\s*\\)\\s*추가");
 
     /** 대본용 기록: 사용자 글 · 응답(도구 호출) · 도구 결과 */
@@ -117,6 +119,10 @@ public class FakeGateway implements ClaudeGateway {
         }
         if ((m = ROTATE.matcher(s)).find())
             return new String[] {"rotate_object", "{\"name\":" + q(m.group(1)) + ",\"rot\":" + num(m.group(2)) + "}"};
+        if ((m = TEXT_ADD.matcher(s)).find())
+            return new String[] {"add_text", "{\"text\":" + q(m.group(1)) + ",\"x\":" + num(m.group(2)) + ",\"y\":" + num(m.group(3)) + "}"};
+        if ((m = TEXT_DEL.matcher(s)).find())
+            return new String[] {"delete_text", "{\"text\":" + q(m.group(1)) + "}"};
         if ((m = TEXT.matcher(s)).find())
             return new String[] {"rename_text", "{\"text\":" + q(m.group(1)) + ",\"newText\":" + q(m.group(2)) + "}"};
         if ((m = RENAME.matcher(s)).find())

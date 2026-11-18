@@ -14,6 +14,8 @@ const ICON: Record<ChangeKind, LucideIcon> = {
   'plan.partition.delete': BrickWall,
   'plan.zone.rename': MapPin,
   'plan.text.rename': Type,
+  'plan.text.add': Type,
+  'plan.text.delete': Trash2,
 }
 
 interface Props {

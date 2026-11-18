@@ -2,6 +2,7 @@ package com.kopens.factory3d.ai;
 
 import static com.kopens.factory3d.change.Snapshots.text;
 
+import com.kopens.factory3d.change.PlanEdits;
 import com.kopens.factory3d.change.Snapshots;
 import com.kopens.factory3d.common.NotFoundException;
 import com.kopens.factory3d.drawing.DrawingDetail;
@@ -77,6 +78,11 @@ public class SceneTools {
                         "{\"op\":{\"type\":\"string\",\"enum\":[\"add\",\"delete\"]},\"a\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},"
                                 + "\"b\":{\"type\":\"array\",\"items\":{\"type\":\"number\"}},\"id\":{\"type\":\"string\"}}", "[\"op\"]"),
                 spec("rename_zone", "구역 이름을 바꾸는 제안.", "{\"id\":{\"type\":\"string\"},\"name\":{\"type\":\"string\"}}", "[\"id\",\"name\"]"),
+                spec("add_text", "도면 바닥에 새 글자를 쓰는 제안. 위치(x, y, m)는 get_scene 의 구역 center·객체 위치를 보고 정한다. h 는 글자 높이(m, 기본 0.8), rot 는 도(반시계, 기본 0).",
+                        "{\"text\":{\"type\":\"string\"},\"x\":{\"type\":\"number\"},\"y\":{\"type\":\"number\"},\"h\":{\"type\":\"number\"},"
+                                + "\"rot\":{\"type\":\"number\"}}", "[\"text\",\"x\",\"y\"]"),
+                spec("delete_text", "도면 글자를 지우는 제안. id(t0, t1 …) 또는 지금 글자(text)로 고른다.",
+                        "{\"id\":{\"type\":\"string\"},\"text\":{\"type\":\"string\"}}", "[]"),
                 spec("rename_text", "도면에 적힌 글자(바닥에 보이는 DXF 글자, get_scene 의 texts)를 바꾸는 제안. id(t0, t1 …) 또는 지금 글자(text)로 고른다.",
                         "{\"id\":{\"type\":\"string\",\"description\":\"texts 의 id (예: t3)\"},\"text\":{\"type\":\"string\",\"description\":\"지금 글자 그대로\"},"
                                 + "\"newText\":{\"type\":\"string\"}}", "[\"newText\"]"));
@@ -100,7 +106,8 @@ public class SceneTools {
         final Map<String, ObjectNode> objects = new LinkedHashMap<>(); // placement:<id> · new:<seq> → 스냅샷
         final Map<String, ObjectNode> partitions = new LinkedHashMap<>(); // 가벽 id → {id, pts, h, t}
         final Map<String, String> zones = new LinkedHashMap<>(); // 구역 id → 이름
-        final Map<Integer, String> texts = new LinkedHashMap<>(); // 도면 글자 순서 → 글자
+        final Map<String, ObjectNode> texts = new LinkedHashMap<>(); // 도면 글자 id → 글자 (DXF 그대로 + id)
+        int textSeq; // 새 글자 id 번호 (기존 t 번호의 최댓값 + 1부터)
         final Map<String, ObjectNode> stationsByKey = new LinkedHashMap<>(); // station:<id> → 스냅샷
         final Map<String, StationView> stationViews = new LinkedHashMap<>(); // station:<id> → 표시용(step 수·PJT)
         final Map<Long, ModelInfo> modelsById = new LinkedHashMap<>();
@@ -120,7 +127,12 @@ public class SceneTools {
             s.partitionIdsEver.add(p.path("id").asString());
         }
         for (JsonNode z : s.plan.path("zones")) s.zones.put(z.path("id").asString(), z.path("name").asString());
-        for (int i = 0; i < s.plan.path("texts").size(); i++) s.texts.put(i, s.plan.path("texts").path(i).path("str").asString(""));
+        for (int i = 0; i < s.plan.path("texts").size(); i++) {
+            JsonNode t = s.plan.path("texts").path(i);
+            String id = PlanEdits.textId(t, i);
+            s.texts.put(id, ((ObjectNode) t.deepCopy()).put("id", id));
+            if (id.matches("t\\d{1,6}")) s.textSeq = Math.max(s.textSeq, Integer.parseInt(id.substring(1)) + 1);
+        }
         for (StationView st : stations.findByDrawing(drawingId)) {
             s.stationsByKey.put("station:" + st.id(), Snapshots.station(json, st));
             s.stationViews.put("station:" + st.id(), st);
@@ -136,7 +148,16 @@ public class SceneTools {
                 }
                 case "plan.partition.delete" -> s.partitions.remove(text(it.before(), "id"));
                 case "plan.zone.rename" -> s.zones.put(text(it.after(), "id"), text(it.after(), "name"));
-                case "plan.text.rename" -> s.texts.put(it.after().path("index").asInt(), text(it.after(), "str"));
+                case "plan.text.rename" -> {
+                    ObjectNode t = s.texts.get(text(it.after(), "id"));
+                    if (t != null) t.put("str", text(it.after(), "str"));
+                }
+                case "plan.text.add" -> {
+                    s.texts.put(text(it.after(), "id"), (ObjectNode) it.after().deepCopy());
+                    String id = text(it.after(), "id");
+                    if (id.matches("t\\d{1,6}")) s.textSeq = Math.max(s.textSeq, Integer.parseInt(id.substring(1)) + 1);
+                }
+                case "plan.text.delete" -> s.texts.remove(text(it.before(), "id"));
                 default -> s.objects.put(it.targetKey(), (ObjectNode) it.after()); // placement.add · move · rotate · rename · update
             }
         }
@@ -162,6 +183,8 @@ public class SceneTools {
             case "edit_partition" -> partition(s, cs, in);
             case "rename_zone" -> renameZone(s, cs, in);
             case "rename_text" -> renameText(s, cs, in);
+            case "add_text" -> addText(s, cs, in);
+            case "delete_text" -> deleteText(s, cs, in);
             default -> err("모르는 도구입니다: " + call.name());
         };
     }
@@ -185,10 +208,9 @@ public class SceneTools {
             if (k > 0) zn.putArray("center").add(r2(cx / k)).add(r2(cy / k));
         }
         ArrayNode texts = out.putArray("texts"); // 바닥에 보이는 도면 글자 (구역·객체 이름과 별개)
-        for (var e : s.texts.entrySet()) {
-            if (e.getKey() >= 300) break;
-            JsonNode t = s.plan.path("texts").path(e.getKey());
-            ObjectNode tn = texts.addObject().put("id", "t" + e.getKey()).put("text", e.getValue()).put("layer", t.path("layer").asString(""));
+        for (ObjectNode t : s.texts.values()) {
+            if (texts.size() >= 300) break;
+            ObjectNode tn = texts.addObject().put("id", t.path("id").asString()).put("text", t.path("str").asString("")).put("layer", t.path("layer").asString(""));
             tn.putArray("at").add(r2(t.path("x").asDouble())).add(r2(t.path("y").asDouble()));
         }
         ArrayNode parts = out.putArray("partitions");
@@ -439,36 +461,78 @@ public class SceneTools {
         return ok(it, "구역 이름 변경 제안");
     }
 
-    private Result renameText(Scene s, Changeset cs, JsonNode in) {
+    /** id(t3) 또는 지금 글자로 하나 고름. 못 고르면 error 문구 */
+    private String pickText(Scene s, JsonNode in) {
         String id = text(in, "id"), cur = text(in, "text");
-        Integer idx = null;
-        if (id != null && id.matches("t\\d{1,5}")) {
-            idx = Integer.parseInt(id.substring(1));
-            if (!s.texts.containsKey(idx)) return err("'" + id + "' 글자가 없습니다");
-        } else if (cur != null) {
-            List<Integer> hit = s.texts.entrySet().stream().filter(e -> e.getValue().equals(cur.strip())).map(Map.Entry::getKey).toList();
-            if (hit.isEmpty()) return err("'" + cur + "' 글자가 도면에 없습니다. get_scene 의 texts 를 확인하세요");
-            if (hit.size() > 1) return err("'" + cur + "' 글자가 " + hit.size() + "곳에 있습니다. id 로 고르세요: "
-                    + hit.stream().map(i -> "t" + i).toList());
-            idx = hit.getFirst();
-        } else {
-            return err("id 또는 text 로 바꿀 글자를 고르세요");
-        }
+        if (id != null && !id.isBlank()) return s.texts.containsKey(id.strip()) ? id.strip() : "!'" + id + "' 글자가 없습니다. get_scene 의 texts 를 확인하세요";
+        if (cur == null || cur.isBlank()) return "!id 또는 text 로 글자를 고르세요";
+        List<String> hit = s.texts.entrySet().stream().filter(e -> e.getValue().path("str").asString("").equals(cur.strip())).map(Map.Entry::getKey).toList();
+        if (hit.isEmpty()) return "!'" + cur + "' 글자가 도면에 없습니다. get_scene 의 texts 를 확인하세요";
+        if (hit.size() > 1) return "!'" + cur + "' 글자가 " + hit.size() + "곳에 있습니다. id 로 고르세요: " + hit;
+        return hit.getFirst();
+    }
+
+    private Result renameText(Scene s, Changeset cs, JsonNode in) {
+        String id = pickText(s, in);
+        if (id.startsWith("!")) return err(id.substring(1));
         String nn = text(in, "newText") == null ? "" : text(in, "newText").strip();
         if (nn.isEmpty() || nn.length() > 200) return err("새 글자는 1~200자로 주세요");
-        String key = "text:" + idx;
+        String key = "text:" + id;
         Optional<Changeset.Item> old = cs.find(key);
-        String base = old.map(i -> text(i.before(), "str")).orElse(s.texts.get(idx));
+        if (old.isPresent() && old.get().kind().equals("plan.text.add")) { // 아직 안 넣은 새 글자 → 그 제안을 고침
+            ObjectNode a = ((ObjectNode) old.get().after().deepCopy()).put("str", nn);
+            Changeset.Item it = cs.replace(old.get(), "plan.text.add", nn, null, a, "도면 글자 추가 '" + nn + "'");
+            return ok(it, "도면 글자 추가 제안");
+        }
+        String base = old.map(i -> text(i.before(), "str")).orElse(s.texts.get(id).path("str").asString(""));
         if (base.equals(nn)) {
             old.ifPresent(cs::remove);
             return new Result("{\"ok\":true,\"message\":\"원래 글자와 같아 글자 제안을 지웠습니다\"}", false, "글자 제안 취소");
         }
-        ObjectNode before = json.createObjectNode().put("index", idx).put("str", base);
-        ObjectNode after = json.createObjectNode().put("index", idx).put("str", nn);
+        ObjectNode before = json.createObjectNode().put("id", id).put("str", base);
+        ObjectNode after = json.createObjectNode().put("id", id).put("str", nn);
         String label = "도면 글자 " + base + " → " + nn;
         Changeset.Item it = old.isPresent() ? cs.replace(old.get(), "plan.text.rename", base, before, after, label)
                 : cs.add("plan.text.rename", base, key, before, after, label);
         return ok(it, "도면 글자 변경 제안");
+    }
+
+    private Result addText(Scene s, Changeset cs, JsonNode in) {
+        String str = text(in, "text") == null ? "" : text(in, "text").strip();
+        if (str.isEmpty() || str.length() > 200) return err("글자는 1~200자로 주세요");
+        if (!in.path("x").isNumber() || !in.path("y").isNumber()) return err("x, y(m)를 숫자로 주세요");
+        double x = in.path("x").asDouble(), y = in.path("y").asDouble();
+        if (x < 0 || y < 0 || x > s.w || y > s.h) return err("위치가 도면 밖입니다 (0~" + r2(s.w) + ", 0~" + r2(s.h) + ")");
+        double h = in.path("h").isNumber() ? in.path("h").asDouble() : 0.8;
+        if (h < 0.1 || h > 10) return err("글자 높이 h 는 0.1~10 m 입니다");
+        double rot = in.path("rot").isNumber() ? in.path("rot").asDouble() : 0;
+        // 색·모양은 도면에서 가장 많이 쓴 글자 레이어를 따름 (없으면 TEXT)
+        Map<String, Long> layers = new java.util.HashMap<>();
+        for (ObjectNode t : s.texts.values()) layers.merge(t.path("layer").asString("TEXT"), 1L, Long::sum);
+        String layer = layers.entrySet().stream().max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse("TEXT");
+        String id = "t" + s.textSeq;
+        ObjectNode after = json.createObjectNode().put("id", id).put("str", str).put("x", r2(x)).put("y", r2(y)).put("h", r2(h))
+                .put("rot", r2(rot)).put("ha", 1).put("va", 2).put("layer", layer).putNull("color");
+        Changeset.Item it = cs.add("plan.text.add", str, "text:" + id, null, after, "도면 글자 추가 '" + str + "' (" + r2(x) + ", " + r2(y) + ")");
+        return ok(it, "도면 글자 추가 제안");
+    }
+
+    private Result deleteText(Scene s, Changeset cs, JsonNode in) {
+        String id = pickText(s, in);
+        if (id.startsWith("!")) return err(id.substring(1));
+        Optional<Changeset.Item> old = cs.find("text:" + id);
+        if (old.isPresent() && old.get().kind().equals("plan.text.add")) {
+            cs.remove(old.get());
+            return new Result("{\"ok\":true,\"message\":\"글자 추가 제안을 지웠습니다\"}", false, "글자 추가 제안 취소");
+        }
+        ObjectNode before = (ObjectNode) s.texts.get(id).deepCopy();
+        if (old.isPresent()) { // 이름 바꾸기 제안 중이던 글자 → 원래 글자로 지움
+            before.put("str", text(old.get().before(), "str"));
+            cs.remove(old.get());
+        }
+        String str = before.path("str").asString("");
+        Changeset.Item it = cs.add("plan.text.delete", str, "text:" + id, before, null, "도면 글자 삭제 '" + str + "'");
+        return ok(it, "도면 글자 삭제 제안");
     }
 
     // ---------- 도우미 ----------

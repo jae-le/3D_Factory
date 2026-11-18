@@ -143,9 +143,19 @@ public class RevertService {
                 parts.add(before.deepCopy());
             }
             case "plan.text.rename" -> {
-                ObjectNode t = PlanEdits.text(plan, after.path("index").asInt(-1));
+                int i = PlanEdits.textIndex(plan, after);
+                ObjectNode t = i < 0 ? null : (ObjectNode) PlanEdits.texts(plan).get(i);
                 if (t == null || !t.path("str").asString("").equals(text(after, "str"))) throw new ConflictException(LATER);
                 t.put("str", text(before, "str"));
+            }
+            case "plan.text.add" -> {
+                int i = PlanEdits.textIndex(plan, after);
+                if (i < 0 || !PlanEdits.texts(plan).get(i).path("str").asString("").equals(text(after, "str"))) throw new ConflictException(LATER);
+                PlanEdits.texts(plan).remove(i);
+            }
+            case "plan.text.delete" -> {
+                if (PlanEdits.textIndex(plan, before) >= 0) throw new ConflictException(LATER);
+                PlanEdits.texts(plan).add(before.deepCopy());
             }
             case "plan.zone.rename" -> {
                 ObjectNode z = PlanEdits.zone(plan, text(after, "id"));

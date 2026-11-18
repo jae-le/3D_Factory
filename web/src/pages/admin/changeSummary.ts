@@ -12,6 +12,8 @@ export const KIND_LABEL: Record<ChangeKind, string> = {
   'plan.partition.delete': '가벽 삭제',
   'plan.zone.rename': '구역 이름',
   'plan.text.rename': '도면 글자',
+  'plan.text.add': '도면 글자 추가',
+  'plan.text.delete': '도면 글자 삭제',
 }
 
 type Snap = Record<string, unknown> | null | undefined
@@ -47,5 +49,7 @@ export function summary(kind: ChangeKind, before: unknown, after: unknown): stri
     }
     case 'plan.zone.rename': return `${String(b?.name)} → ${String(a?.name)}`
     case 'plan.text.rename': return `${String(b?.str)} → ${String(a?.str)}`
+    case 'plan.text.add': return `'${String(a?.str)}' (${f1(Number(a?.x))}, ${f1(Number(a?.y))})`
+    case 'plan.text.delete': return `'${String(b?.str)}'`
   }
 }

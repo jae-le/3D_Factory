@@ -174,4 +174,26 @@ class ApplyRevertApiTest extends AiTestBase {
         revert(b, KIM).andExpect(status().isOk());
         assertThat(jdbc.queryForObject("select plan->'texts'->0->>'str' from drawing where id = ?", String.class, drawing)).isEqualTo("Station (미표기)");
     }
+
+    @Test
+    void 도면_글자_추가_삭제_적용과_되돌리기_지워도_id_가_안_밀림() throws Exception {
+        String del = propose("kim", "글자 'Station (미표기)' 를 지워줘");
+        apply(del, KIM).andExpect(jsonPath("$.applied").value(1));
+        assertThat(jdbc.queryForObject("select plan->'texts' from drawing where id = ?", String.class, drawing))
+                .doesNotContain("미표기").contains("\"id\": \"t1\"", "출하"); // 남은 글자는 처음 id 그대로
+        chat.chat("kim", drawing, "x", new ChatSink() { // 대화 비우기 대신 새 대화
+            public void text(String c) {}
+            public void tool(String n, String l) {}
+            public void proposal(Changeset.View p) {}
+            public void done(ChatService.Done d) {}
+            public void error(String e) {}
+        });
+        String add = propose("kim", "글자 '정문' 을 (12, 4)에 써줘");
+        apply(add, KIM).andExpect(jsonPath("$.applied").value(1));
+        assertThat(jdbc.queryForObject("select plan->'texts'->1->>'str' from drawing where id = ?", String.class, drawing)).isEqualTo("정문");
+        assertThat(jdbc.queryForObject("select plan->'texts'->1->>'id' from drawing where id = ?", String.class, drawing)).isEqualTo("t2");
+        revert(add, KIM).andExpect(status().isOk());
+        revert(del, KIM).andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select plan->'texts' from drawing where id = ?", String.class, drawing)).contains("미표기", "출하").doesNotContain("정문");
+    }
 }
