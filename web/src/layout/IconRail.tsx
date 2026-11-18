@@ -1,10 +1,10 @@
-import { Bot, Box, Boxes, Footprints, LayoutDashboard, Play, Settings, type LucideIcon } from 'lucide-react'
+import { Bot, Box, Boxes, Footprints, LayoutDashboard, Settings, type LucideIcon } from 'lucide-react'
 import { useNavigate } from 'react-router'
 import { REASON_TEXT } from '../ai/types'
 import { useAiStatus } from '../ai/useAiStatus'
 import { hasRole, useAuth } from '../auth/context'
 
-export type RailKey = 'factory' | 'objects' | 'walk' | 'dashboard' | 'run' | 'chat' | 'admin'
+export type RailKey = 'factory' | 'objects' | 'walk' | 'dashboard' | 'chat' | 'admin'
 
 /** 3D 공장 화면의 옆 패널 (객체 · AI 챗봇 — 한 번에 하나). 다른 화면에서 누르면 공장 화면으로 가서 그 패널을 엶 */
 export interface RailPanel {
@@ -26,14 +26,13 @@ const MENU: Item[] = [
   { key: 'objects', label: '객체', icon: Boxes, to: '/' },
   { key: 'walk', label: '체험', icon: Footprints, to: '/walk' },
   { key: 'dashboard', label: '상황판', icon: LayoutDashboard, to: '/dashboard' },
-  { key: 'run', label: '실행', icon: Play },
   { key: 'chat', label: 'AI 챗봇', icon: Bot, to: '/' },
 ]
 const ADMIN: Item = { key: 'admin', label: '관리자', icon: Settings, to: '/admin' }
 export const OBJECTS_PANEL_KEY = 'f3d:objects-panel'
 export const OPEN_CHAT_KEY = 'f3d:open-chat'
 
-/** 맨 왼쪽 메뉴(아이콘 + 이름). 실행은 다음 단계에서 열림, AI 챗봇은 운전원 이상 + Claude API 사용 가능일 때, 관리자는 관리자에게만 */
+/** 맨 왼쪽 메뉴(아이콘 + 이름). AI 챗봇은 운전원 이상 + AI API 사용 가능일 때, 관리자는 관리자에게만 */
 export function IconRail({ active, panel }: { active: RailKey; panel?: RailPanel }) {
   const navigate = useNavigate()
   const { user } = useAuth()
