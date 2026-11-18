@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
 import { applyProposal, discardProposal, getChatHistory, resetChat, revertBatch, startNewChat, streamChat } from './api'
 import { chatReducer, initialChat, type ChatState } from './chat'
+import type { ChatImage } from './types'
 
 export interface Chat {
   state: ChatState
-  send(text: string): void
+  send(text: string, images?: ChatImage[]): void
   apply(): void
   discard(): void
   revert(): void
@@ -45,14 +46,14 @@ export function useChat(drawingId: number | null, onApplied: () => void): Chat {
   )
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, images: ChatImage[] = []) => {
       const t = text.trim()
-      if (drawingId == null || !t || busy.current) return
+      if (drawingId == null || (!t && images.length === 0) || busy.current) return
       busy.current = true
-      dispatch({ type: 'send', text: t })
+      dispatch({ type: 'send', text: t, images: images.map((i) => i.url) })
       const ac = new AbortController()
       abort.current = ac
-      streamChat(drawingId, t, (ev) => !ac.signal.aborted && dispatch({ type: 'event', ev }), ac.signal)
+      streamChat(drawingId, t, (ev) => !ac.signal.aborted && dispatch({ type: 'event', ev }), ac.signal, images)
         .then(() => !ac.signal.aborted && dispatch({ type: 'end' }))
         .catch((e: Error) => !ac.signal.aborted && dispatch({ type: 'fail', message: e.message }))
         .finally(() => {

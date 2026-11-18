@@ -7,6 +7,9 @@ import java.util.function.Consumer;
 public interface ClaudeGateway {
     record ToolSpec(String name, String description, String inputSchemaJson) {}
 
+    /** 질문에 붙인 이미지 (image/png · image/jpeg · image/webp, base64) */
+    record Image(String mediaType, String base64) {}
+
     record Call(String apiKey, String model, String system, List<ToolSpec> tools, long maxTokens) {}
 
     record ToolCall(String id, String name, String inputJson) {}

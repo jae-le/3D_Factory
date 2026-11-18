@@ -55,8 +55,15 @@ public class GeminiGateway implements ClaudeGateway {
         final Map<String, String> geminiIds = new HashMap<>(); // 우리 id → Gemini 가 준 id (없으면 빠짐)
 
         public void addUserText(String text) {
+            addUser(text, List.of());
+        }
+
+        public void addUser(String text, List<Image> images) {
             ObjectNode c = JSON.createObjectNode().put("role", "user");
-            c.putArray("parts").addObject().put("text", text);
+            ArrayNode parts = c.putArray("parts");
+            if (images != null)
+                for (Image im : images) parts.addObject().putObject("inlineData").put("mimeType", im.mediaType()).put("data", im.base64());
+            parts.addObject().put("text", text);
             contents.add(c);
         }
 

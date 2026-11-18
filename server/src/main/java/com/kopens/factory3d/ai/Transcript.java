@@ -6,6 +6,11 @@ import java.util.List;
 public interface Transcript {
     void addUserText(String text);
 
+    /** 글 + 이미지. 이미지를 모르는 기록(가짜)은 글만 */
+    default void addUser(String text, List<ClaudeGateway.Image> images) {
+        addUserText(text);
+    }
+
     /** 한 응답의 도구 호출 결과를 모두 한 사용자 메시지로 */
     void addToolResults(List<ClaudeGateway.ToolResult> results);
 

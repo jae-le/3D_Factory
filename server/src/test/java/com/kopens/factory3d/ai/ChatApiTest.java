@@ -178,6 +178,31 @@ class ChatApiTest extends AiTestBase {
     }
 
     @Test
+    void 이미지는_기록에_표시만() {
+        enableAi();
+        chat.chat("kim", drawing, "", List.of(new ClaudeGateway.Image("image/png", "iVBORw0KGgo=")), new Rec());
+        chat.chat("kim", drawing, "이거 봐", List.of(new ClaudeGateway.Image("image/png", "iVBORw0KGgo="),
+                new ClaudeGateway.Image("image/jpeg", "/9j/4AAQ")), new Rec());
+        assertThat(history.current("kim", drawing)).filteredOn(e -> e.role().equals("user")).extracting(ChatHistory.Entry::text)
+                .containsExactly("[이미지 1장]", "이거 봐\n[이미지 2장]");
+    }
+
+    @Test
+    void 이미지_검사() {
+        String png = java.util.Base64.getEncoder().encodeToString(new byte[] {1, 2, 3});
+        assertThat(ChatController.images(List.of(new ChatController.ImageBody("image/png", png)))).hasSize(1);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> ChatController.images(List.of(new ChatController.ImageBody("image/gif", png))))
+                .hasMessage("이미지는 PNG, JPG, WEBP 만 붙일 수 있습니다.");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> ChatController.images(List.of(new ChatController.ImageBody("image/png", "@@"))))
+                .hasMessage("이미지를 읽지 못했습니다.");
+        var four = java.util.Collections.nCopies(4, new ChatController.ImageBody("image/png", png));
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> ChatController.images(four)).hasMessage("이미지는 3장까지 붙일 수 있습니다.");
+        String big = java.util.Base64.getEncoder().encodeToString(new byte[5 * 1024 * 1024 + 1]);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> ChatController.images(List.of(new ChatController.ImageBody("image/png", big))))
+                .hasMessage("이미지 한 장은 5MB 이하만 붙일 수 있습니다.");
+    }
+
+    @Test
     void 오류도_답으로_기록() {
         ask("안녕");
         assertThat(history.current("kim", drawing).get(1).error()).isEqualTo("AI API 키가 등록되지 않았습니다 (관리자 › AI API 관리)");

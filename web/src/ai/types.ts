@@ -8,6 +8,8 @@ export const REASON_TEXT: Record<AiReason, string> = {
   'over-limit': '이번 달 AI 사용 한도를 넘었습니다',
   'over-daily': '오늘 Gemini 무료 요청 한도(RPD)에 닿았습니다 — 미국 태평양 시간 자정(한국 오후 4~5시)에 다시 열립니다',
 }
+/** 질문에 붙이는 이미지: url = 미리보기용 data URL, data = base64 본문 */
+export interface ChatImage { name: string; mediaType: 'image/png' | 'image/jpeg' | 'image/webp'; data: string; url: string }
 /** 지난 대화 한 줄 (서버 기록) */
 export interface ChatEntry { id: number; at: string; role: 'user' | 'ai'; text: string; tools: string[]; error: string | null }
 

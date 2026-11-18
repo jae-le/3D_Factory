@@ -202,4 +202,16 @@ class GeminiGatewayTest {
         g.ping("k", "gemini-2.5-flash");
         assertThat(bodies.get(2).at("/generationConfig").has("thinkingConfig")).isFalse();
     }
+
+    @Test
+    void 이미지는_inlineData_로_글보다_앞에() {
+        replies.add(new Reply(200, sse("{\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"봤어요\"}]},\"finishReason\":\"STOP\"}]}")));
+        Transcript t = g.newTranscript();
+        t.addUser("이거 봐", List.of(new ClaudeGateway.Image("image/png", "iVBORw0KGgo=")));
+        g.next(call(), t, s -> {});
+        JsonNode parts = bodies.get(0).at("/contents/0/parts");
+        assertThat(parts.at("/0/inlineData/mimeType").asString()).isEqualTo("image/png");
+        assertThat(parts.at("/0/inlineData/data").asString()).isEqualTo("iVBORw0KGgo=");
+        assertThat(parts.at("/1/text").asString()).isEqualTo("이거 봐");
+    }
 }

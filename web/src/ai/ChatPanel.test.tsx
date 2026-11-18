@@ -116,4 +116,19 @@ describe('AI 챗봇 패널', () => {
     expect(screen.queryByText('옮겨줘')).toBeNull()
     expect(calls.some((c) => c.url === '/api/ai/chat/new' && (c.body as { drawingId: number }).drawingId === 1)).toBe(true)
   })
+
+  it('이미지를 붙여 보내면 요청에 실리고 말풍선에 미리보기, 형식이 틀리면 안내', async () => {
+    const { calls } = setup()
+    const input = screen.getByLabelText('이미지 파일')
+    fireEvent.change(input, { target: { files: [new File(['gif'], 'a.gif', { type: 'image/gif' })] } })
+    expect(await screen.findByRole('alert')).toHaveTextContent('이미지는 PNG, JPG, WEBP 만 붙일 수 있습니다.')
+    fireEvent.change(input, { target: { files: [new File([new Uint8Array([1, 2, 3])], 'plan.png', { type: 'image/png' })] } })
+    expect(await screen.findByRole('img', { name: 'plan.png' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: '보내기' }))
+    await vi.waitFor(() => expect(calls.some((c) => c.url === '/api/ai/chat')).toBe(true))
+    const body = calls.find((c) => c.url === '/api/ai/chat')!.body as { message: string; images: { mediaType: string; data: string }[] }
+    expect(body.message).toBe('')
+    expect(body.images).toEqual([{ mediaType: 'image/png', data: 'AQID' }])
+    expect(screen.getByRole('img', { name: '붙인 이미지 1' })).toBeInTheDocument()
+  })
 })

@@ -27,11 +27,17 @@ public class RoutingGateway implements ClaudeGateway {
         Transcript inner;
         ClaudeGateway owner;
         String lastUser;
+        java.util.List<Image> lastImages = java.util.List.of();
         int pending; // inner 가 생기기 전 넣은 질문 수 (0 또는 1)
 
         public void addUserText(String text) {
+            addUser(text, java.util.List.of());
+        }
+
+        public void addUser(String text, java.util.List<Image> images) {
             lastUser = text;
-            if (inner != null) inner.addUserText(text);
+            lastImages = images == null ? java.util.List.of() : images;
+            if (inner != null) inner.addUser(text, lastImages);
             else pending = 1;
         }
 
@@ -61,7 +67,7 @@ public class RoutingGateway implements ClaudeGateway {
         if (rt.owner != g) {
             rt.owner = g;
             rt.inner = g.newTranscript();
-            if (rt.lastUser != null) rt.inner.addUserText(rt.lastUser);
+            if (rt.lastUser != null) rt.inner.addUser(rt.lastUser, rt.lastImages);
             rt.pending = 0;
         }
         return g.next(call, rt.inner, onText);

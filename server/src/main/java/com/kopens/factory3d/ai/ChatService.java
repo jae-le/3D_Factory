@@ -50,12 +50,17 @@ public class ChatService {
 
     /** 기록을 남기며 응답 (질문 한 줄 + 답 한 줄: 글 · 도구 줄 · 오류) */
     public void chat(String user, long drawingId, String message, ChatSink out) {
+        chat(user, drawingId, message, List.of(), out);
+    }
+
+    public void chat(String user, long drawingId, String message, List<ClaudeGateway.Image> images, ChatSink out) {
         Recorder sink = new Recorder(out);
         try {
-            chatInner(user, drawingId, message, sink);
+            chatInner(user, drawingId, message, images, sink);
         } finally {
             if (drawings.findById(drawingId) != null) {
-                history.add(user, drawingId, "user", message, null, null);
+                String shown = images.isEmpty() ? message : (message.isEmpty() ? "" : message + "\n") + "[이미지 " + images.size() + "장]";
+                history.add(user, drawingId, "user", shown, null, null);
                 history.add(user, drawingId, "ai", sink.text.toString(), sink.tools, sink.error);
             }
         }
@@ -100,7 +105,7 @@ public class ChatService {
         }
     }
 
-    private void chatInner(String user, long drawingId, String message, ChatSink sink) {
+    private void chatInner(String user, long drawingId, String message, List<ClaudeGateway.Image> images, ChatSink sink) {
         String[] model = {null};
         try {
             AiSettingService.Status st = settings.status();
@@ -126,7 +131,7 @@ public class ChatService {
                 return;
             }
             try {
-                run(user, key, d, c, message, sink);
+                run(user, key, d, c, message, images, sink);
             } finally {
                 c.lock.unlock();
             }
@@ -142,11 +147,13 @@ public class ChatService {
         }
     }
 
-    private void run(String user, AiSettingService.Active key, DrawingDetail d, ProposalStore.Conversation c, String message, ChatSink sink) {
+    private void run(String user, AiSettingService.Active key, DrawingDetail d, ProposalStore.Conversation c, String message,
+            List<ClaudeGateway.Image> images, ChatSink sink) {
         int t0 = c.transcript.messages();
         String head = c.turns == 0 ? "[도면: " + d.name() + " · 지금: " + ZonedDateTime.now(zone).format(WHEN) + "]\n" : "";
         String note = c.takeNote();
-        c.transcript.addUserText(head + (note == null ? "" : note + "\n") + message);
+        String ask = message.isEmpty() ? "(붙인 이미지를 보고 답해 주세요)" : message;
+        c.transcript.addUser(head + (note == null ? "" : note + "\n") + ask, images);
         c.turns++;
         Changeset cs = c.changeset;
         Changeset.Snapshot snap = cs.snapshot();

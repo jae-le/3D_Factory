@@ -1,17 +1,23 @@
 import { ApiError, apiErrorOf, apiJson, apiSend, csrfToken } from '../api/client'
 import { sseParser, toChatEvent } from './sse'
-import type { AiSettings, AiStatus, AiTestResult, ApplyResult, ChangePage, ChatEntry, ChatEvent, UsageReport } from './types'
+import type { AiSettings, AiStatus, AiTestResult, ApplyResult, ChangePage, ChatEntry, ChatEvent, ChatImage, UsageReport } from './types'
 
 export const getAiStatus = () => apiJson<AiStatus>('/api/ai/status')
 
 /** 챗봇 요청 → SSE 를 읽어 이벤트마다 onEvent. 400·403 등은 ApiError, 끊으면(signal) AbortError */
-export async function streamChat(drawingId: number, message: string, onEvent: (e: ChatEvent) => void, signal?: AbortSignal): Promise<void> {
+export async function streamChat(
+  drawingId: number,
+  message: string,
+  onEvent: (e: ChatEvent) => void,
+  signal?: AbortSignal,
+  images: ChatImage[] = [],
+): Promise<void> {
   let r: Response
   try {
     r = await fetch('/api/ai/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': csrfToken() },
-      body: JSON.stringify({ drawingId, message }),
+      body: JSON.stringify(images.length ? { drawingId, message, images: images.map((i) => ({ mediaType: i.mediaType, data: i.data })) } : { drawingId, message }),
       signal,
     })
   } catch (e) {

@@ -317,6 +317,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .chat-input textarea:focus { outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent); outline-offset: 0; }
 .chat-input button { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 8px; background: var(--primary); color: #fff; }
 .chat-input button:disabled, .chat-input textarea:disabled { opacity: 0.5; }
+.chat-input .chat-attach-btn { background: transparent; color: var(--text-sub, inherit); border: 1px solid var(--line-strong); }
+.chat-attach { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px 0; border-top: 1px solid var(--line); }
+.chat-attach-item { position: relative; width: 56px; height: 56px; }
+.chat-attach-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }
+.chat-attach-item button { position: absolute; top: -6px; right: -6px; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 50%; background: #000a; color: #fff; }
+.chat-msg-images { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.chat-msg-images img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; }
 .spin { animation: f3d-spin 1s linear infinite; }
 @keyframes f3d-spin { to { transform: rotate(360deg); } }
 

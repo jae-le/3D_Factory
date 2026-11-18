@@ -54,6 +54,27 @@ public class AnthropicGateway implements ClaudeGateway {
             messages.add(BetaMessageParam.ofUser(text));
         }
 
+        public void addUser(String text, List<Image> images) {
+            if (images == null || images.isEmpty()) {
+                addUserText(text);
+                return;
+            }
+            List<BetaContentBlockParam> blocks = new ArrayList<>();
+            for (Image im : images)
+                blocks.add(BetaContentBlockParam.ofImage(com.anthropic.models.beta.messages.BetaBase64ImageSource.builder()
+                        .data(im.base64()).mediaType(mediaType(im.mediaType())).build()));
+            blocks.add(BetaContentBlockParam.ofText(text));
+            messages.add(BetaMessageParam.ofUserOfContentBlockParams(blocks));
+        }
+
+        private static com.anthropic.models.beta.messages.BetaBase64ImageSource.MediaType mediaType(String t) {
+            return switch (t) {
+                case "image/png" -> com.anthropic.models.beta.messages.BetaBase64ImageSource.MediaType.IMAGE_PNG;
+                case "image/webp" -> com.anthropic.models.beta.messages.BetaBase64ImageSource.MediaType.IMAGE_WEBP;
+                default -> com.anthropic.models.beta.messages.BetaBase64ImageSource.MediaType.IMAGE_JPEG;
+            };
+        }
+
         public void addToolResults(List<ToolResult> results) {
             List<BetaContentBlockParam> blocks = results.stream()
                     .map(r -> BetaContentBlockParam.ofToolResult(BetaToolResultBlockParam.builder()

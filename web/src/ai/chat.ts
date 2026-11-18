@@ -1,14 +1,14 @@
 import type { ApplyResult, ChatEntry, ChatEvent, ChatUsage, Proposal, ProposalItem } from './types'
 
 export interface ToolLine { name: string; label: string }
-export interface UserMsg { id: number; role: 'user'; text: string }
+export interface UserMsg { id: number; role: 'user'; text: string; images?: string[] }
 export interface AiMsg { id: number; role: 'ai'; text: string; tools: ToolLine[]; error: string | null; done: boolean; usage: ChatUsage | null }
 export type Msg = UserMsg | AiMsg
 export type ProposalStatus = 'open' | 'applying' | 'applied' | 'reverting' | 'reverted'
 export interface ProposalState { proposal: Proposal; status: ProposalStatus; result: ApplyResult | null; error: string | null }
 export interface ChatState { msgs: Msg[]; sending: boolean; proposal: ProposalState | null; nextId: number }
 export type ChatAction =
-  | { type: 'send'; text: string }
+  | { type: 'send'; text: string; images?: string[] }
   | { type: 'event'; ev: ChatEvent }
   | { type: 'end' }
   | { type: 'fail'; message: string }
@@ -40,7 +40,7 @@ export function chatReducer(s: ChatState, a: ChatAction): ChatState {
         ...s,
         sending: true,
         nextId: s.nextId + 2,
-        msgs: [...s.msgs, { id: s.nextId, role: 'user', text: a.text }, { id: s.nextId + 1, role: 'ai', text: '', tools: [], error: null, done: false, usage: null }],
+        msgs: [...s.msgs, { id: s.nextId, role: 'user', text: a.text, ...(a.images?.length ? { images: a.images } : {}) }, { id: s.nextId + 1, role: 'ai', text: '', tools: [], error: null, done: false, usage: null }],
       }
     case 'event': {
       const ev = a.ev
