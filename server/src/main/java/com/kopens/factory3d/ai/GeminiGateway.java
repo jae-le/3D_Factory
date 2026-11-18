@@ -29,6 +29,7 @@ import tools.jackson.databind.node.ObjectNode;
  * 도구 스키마는 Gemini 가 받는 부분만(additionalProperties 빼고, 빈 object 는 parameters 생략).
  */
 public class GeminiGateway implements ClaudeGateway {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(GeminiGateway.class);
     static final String BASE = "https://generativelanguage.googleapis.com/v1beta";
     private static final ObjectMapper JSON = JsonMapper.builder().build();
     private static final Set<String> REFUSALS = Set.of("SAFETY", "RECITATION", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "IMAGE_SAFETY");
@@ -98,8 +99,9 @@ public class GeminiGateway implements ClaudeGateway {
             for (ToolSpec s : call.tools()) decls.add(declaration(s));
         }
         body.putObject("generationConfig").put("maxOutputTokens", call.maxTokens());
+        think(body, call.model(), "low");
 
-        HttpResponse<InputStream> res = send(call.apiKey(), call.model(), "streamGenerateContent?alt=sse", body, Duration.ofSeconds(90));
+        HttpResponse<InputStream> res = sendThinking(call.apiKey(), call.model(), "streamGenerateContent?alt=sse", body, Duration.ofSeconds(90));
         List<ObjectNode> parts = new ArrayList<>();
         StringBuilder text = new StringBuilder();
         List<ToolCall> calls = new ArrayList<>();
@@ -156,9 +158,10 @@ public class GeminiGateway implements ClaudeGateway {
     public Ping ping(String apiKey, String model) {
         ObjectNode body = JSON.createObjectNode();
         body.putArray("contents").addObject().put("role", "user").putArray("parts").addObject().put("text", "ping");
-        body.putObject("generationConfig").put("maxOutputTokens", 16);
+        body.putObject("generationConfig").put("maxOutputTokens", 64);
+        think(body, model, "minimal");
         long t0 = System.nanoTime();
-        HttpResponse<InputStream> res = send(apiKey, model, "generateContent", body, Duration.ofSeconds(30));
+        HttpResponse<InputStream> res = sendThinking(apiKey, model, "generateContent", body, Duration.ofSeconds(60));
         try (InputStream in = res.body()) {
             JsonNode j = JSON.readTree(in);
             return new Ping(model, (System.nanoTime() - t0) / 1_000_000, usage(model, j.get("usageMetadata")));
@@ -193,6 +196,26 @@ public class GeminiGateway implements ClaudeGateway {
             throw new AiCallException(AiCallException.Kind.NETWORK, e);
         }
         return out;
+    }
+
+    /** Gemini 3 계열은 답 전에 오래 생각할 수 있어 수준을 낮춤 (붐빌 때 첫 응답이 수십 초 늦어짐) */
+    static void think(ObjectNode body, String model, String level) {
+        if (model.startsWith("gemini-3")) ((ObjectNode) body.get("generationConfig")).putObject("thinkingConfig").put("thinkingLevel", level);
+    }
+
+    /** 모델이 생각 수준 설정을 받지 않으면(400) 빼고 한 번 더 */
+    private HttpResponse<InputStream> sendThinking(String apiKey, String model, String method, ObjectNode body, Duration wait) {
+        long t0 = System.nanoTime();
+        try {
+            return send(apiKey, model, method, body, wait);
+        } catch (AiCallException e) {
+            ObjectNode gc = (ObjectNode) body.get("generationConfig");
+            if (!gc.has("thinkingConfig") || e.getMessage() == null || !e.getMessage().toLowerCase().contains("think")) throw e;
+            gc.remove("thinkingConfig");
+            return send(apiKey, model, method, body, wait);
+        } finally {
+            log.info("Gemini {} {} 첫 응답까지 {} ms", model, method.replaceFirst("\\?.*", ""), (System.nanoTime() - t0) / 1_000_000);
+        }
     }
 
     /** Gemini 함수 선언: 스키마에서 받지 않는 키를 빼고, 속성이 없으면 parameters 를 생략 */

@@ -190,4 +190,16 @@ class GeminiGatewayTest {
         assertThat(paths.get(0)).isEqualTo("/v1beta/models?pageSize=200");
         assertThat(keys.get(0)).isEqualTo("k");
     }
+
+    @Test
+    void gemini_3_은_생각_수준을_낮추고_거부하면_빼고_다시() {
+        replies.add(new Reply(400, "{\"error\":{\"code\":400,\"message\":\"Unknown name thinkingLevel\",\"status\":\"INVALID_ARGUMENT\"}}"));
+        replies.add(new Reply(200, "{\"usageMetadata\":{\"promptTokenCount\":3,\"candidatesTokenCount\":1}}"));
+        g.ping("k", "gemini-3.8-flash");
+        assertThat(bodies.get(0).at("/generationConfig/thinkingConfig/thinkingLevel").asString()).isEqualTo("minimal");
+        assertThat(bodies.get(1).at("/generationConfig").has("thinkingConfig")).isFalse();
+        replies.add(new Reply(200, "{\"usageMetadata\":{\"promptTokenCount\":3,\"candidatesTokenCount\":1}}"));
+        g.ping("k", "gemini-2.5-flash");
+        assertThat(bodies.get(2).at("/generationConfig").has("thinkingConfig")).isFalse();
+    }
 }
