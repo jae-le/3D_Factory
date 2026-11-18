@@ -87,9 +87,9 @@ export function AiUsagePage() {
             <strong>{tok(m.calls)}</strong>
           </div>
           <div>
-            <span>입력 · 출력 토큰</span>
+            <span>입력 / 출력 토큰</span>
             <strong>
-              {tok(m.inputTokens)} · {tok(m.outputTokens)}
+              {tok(m.inputTokens)} / {tok(m.outputTokens)}
             </strong>
           </div>
           {setting?.geminiToday != null && (
@@ -108,7 +108,6 @@ export function AiUsagePage() {
               >
                 <span style={{ width: `${Math.min(100, setting.geminiDailyLimit > 0 ? (setting.geminiToday / setting.geminiDailyLimit) * 100 : 100)}%` }} />
               </div>
-              <small className="kp-help">미국 태평양 시간 자정(한국 오후 4~5시)에 초기화 · 자동 재시도는 세지 않아 AI Studio 숫자가 조금 더 클 수 있음</small>
             </div>
           )}
           <div className="usage-cost">
@@ -121,6 +120,11 @@ export function AiUsagePage() {
             </div>
           </div>
         </div>
+      )}
+      {setting?.geminiToday != null && (
+        <p className="kp-help usage-note">
+          Gemini 하루 한도는 미국 태평양 시간 자정(한국 오후 4~5시)에 초기화됩니다. 자동 재시도는 세지 않아 AI Studio 숫자가 조금 더 클 수 있습니다.
+        </p>
       )}
       <form className="kp-filter" onSubmit={submit}>
         <label className="kp-field">
