@@ -1,6 +1,6 @@
 import { KeyRound, PlugZap, Trash2 } from 'lucide-react'
 import { useEffect, useState, type FormEvent } from 'react'
-import { deleteAiKey, getAiSettings, saveAiSettings, setAiKey, testAi } from '../../ai/api'
+import { deleteAiKey, getAiSettings, getGeminiModels, saveAiSettings, setAiKey, testAi } from '../../ai/api'
 import { AI_MODELS, type AiModel, type AiSettings, type AiTestResult } from '../../ai/types'
 import { Modal } from '../../components/Modal'
 import { when } from './format'
@@ -15,6 +15,18 @@ export function AiSettingsPage() {
   const [test, setTest] = useState<AiTestResult | 'running' | null>(null)
   const [form, setForm] = useState<{ model: AiModel; limit: string; enabled: boolean }>({ model: 'claude-opus-5-5', limit: '50', enabled: false })
   const [saved, setSaved] = useState<string | null>(null)
+  const [gemini, setGemini] = useState<{ id: string; label: string }[]>([])
+  const [geminiMsg, setGeminiMsg] = useState<string | null>(null)
+  const loadGemini = () => {
+    setGeminiMsg('불러오는 중…')
+    getGeminiModels()
+      .then((l) => {
+        setGemini(l)
+        setGeminiMsg(l.length ? `Gemini 모델 ${l.length}개를 불러왔습니다` : '쓸 수 있는 Gemini 모델이 없습니다 (Gemini 키인지 확인하세요)')
+      })
+      .catch((e: Error) => setGeminiMsg(e.message))
+  }
+  const options = [...AI_MODELS.map((m) => ({ id: m.id, label: m.label })), ...gemini.filter((g) => !AI_MODELS.some((m) => m.id === g.id)).map((g) => ({ id: g.id, label: `${g.label} (${g.id})` }))]
   const take = (v: AiSettings) => {
     setS(v)
     setForm({ model: v.model, limit: String(v.monthlyLimitUsd), enabled: v.enabled })
@@ -108,14 +120,20 @@ export function AiSettingsPage() {
         <label className="kp-field">
           <span>모델</span>
           <select className="kp-input" value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value as AiModel })}>
-            {AI_MODELS.map((m) => (
+            {options.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label}
               </option>
             ))}
-            {!AI_MODELS.some((m) => m.id === form.model) && <option value={form.model}>{form.model}</option>}
+            {!options.some((m) => m.id === form.model) && <option value={form.model}>{form.model}</option>}
           </select>
         </label>
+        <span className="kp-help">
+          <button className="kp-btn kp-btn-stroke kp-btn-sm" type="button" disabled={!s?.hasKey} onClick={loadGemini}>
+            Gemini 모델 불러오기
+          </button>{' '}
+          {geminiMsg ?? 'Gemini 키를 저장한 뒤 누르면, 이 키로 쓸 수 있는 모델을 Google 에서 받아 목록에 넣습니다.'}
+        </span>
         <span className="kp-help">{price}</span>
         <label className="kp-field">
           <span>월 한도 (USD)</span>

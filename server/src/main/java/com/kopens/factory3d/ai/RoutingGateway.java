@@ -68,6 +68,11 @@ public class RoutingGateway implements ClaudeGateway {
     }
 
     @Override
+    public java.util.List<ModelOption> geminiModels(String apiKey) {
+        return gemini.geminiModels(apiKey);
+    }
+
+    @Override
     public Ping ping(String apiKey, String model) {
         return target(model).ping(apiKey, model);
     }

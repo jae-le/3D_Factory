@@ -33,6 +33,8 @@ public class GeminiGateway implements ClaudeGateway {
     private static final ObjectMapper JSON = JsonMapper.builder().build();
     private static final Set<String> REFUSALS = Set.of("SAFETY", "RECITATION", "PROHIBITED_CONTENT", "BLOCKLIST", "SPII", "IMAGE_SAFETY");
 
+    /** 바쁨(503)·요청 많음(429) 이면 기다렸다 다시 (ms). 테스트는 짧게 */
+    long[] retryWaitsMs = {1500, 4000};
     private final String base;
     // HTTP/1.1: JDK 의 HTTP/2 로 Google 에 붙으면 응답을 못 받고 멈추는 경우가 있어 단순한 쪽으로
     private final HttpClient http = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
@@ -165,6 +167,34 @@ public class GeminiGateway implements ClaudeGateway {
         }
     }
 
+    @Override
+    public List<ModelOption> geminiModels(String apiKey) {
+        HttpRequest req = HttpRequest.newBuilder(URI.create(base + "/models?pageSize=200"))
+                .timeout(Duration.ofSeconds(20)).header("x-goog-api-key", apiKey).GET().build();
+        HttpResponse<InputStream> res;
+        try {
+            res = http.send(req, HttpResponse.BodyHandlers.ofInputStream());
+        } catch (IOException e) {
+            throw new AiCallException(AiCallException.Kind.NETWORK, e);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new AiCallException(AiCallException.Kind.NETWORK, e);
+        }
+        if (res.statusCode() >= 400) throw error(res);
+        List<ModelOption> out = new ArrayList<>();
+        try (InputStream in = res.body()) {
+            for (JsonNode m : JSON.readTree(in).path("models")) {
+                String id = m.path("name").asString("").replaceFirst("^models/", "");
+                boolean gen = false;
+                for (JsonNode g : m.path("supportedGenerationMethods")) gen |= "generateContent".equals(g.asString());
+                if (gen && id.matches("gemini-[a-z0-9][a-z0-9.-]{0,32}")) out.add(new ModelOption(id, m.path("displayName").asString(id)));
+            }
+        } catch (IOException e) {
+            throw new AiCallException(AiCallException.Kind.NETWORK, e);
+        }
+        return out;
+    }
+
     /** Gemini 함수 선언: 스키마에서 받지 않는 키를 빼고, 속성이 없으면 parameters 를 생략 */
     static ObjectNode declaration(ToolSpec s) {
         ObjectNode d = JSON.createObjectNode().put("name", s.name()).put("description", s.description());
@@ -204,6 +234,11 @@ public class GeminiGateway implements ClaudeGateway {
         HttpResponse<InputStream> res;
         try {
             res = http.send(req, HttpResponse.BodyHandlers.ofInputStream());
+            for (int i = 0; i < retryWaitsMs.length && (res.statusCode() == 503 || res.statusCode() == 429); i++) {
+                res.body().close();
+                Thread.sleep(retryWaitsMs[i]);
+                res = http.send(req, HttpResponse.BodyHandlers.ofInputStream());
+            }
         } catch (java.net.http.HttpTimeoutException e) {
             throw new AiCallException(AiCallException.Kind.OTHER, "Gemini 가 " + wait.toSeconds() + "초 안에 답하지 않았습니다 — 잠시 뒤 다시 시도하세요", e);
         } catch (IOException e) {
@@ -236,6 +271,7 @@ public class GeminiGateway implements ClaudeGateway {
         RuntimeException cause = new RuntimeException("Gemini HTTP " + code + " " + status + ": " + msg);
         if (code == 401 || code == 403 || raw.contains("API_KEY_INVALID")) return new AiCallException(AiCallException.Kind.KEY, cause);
         if (code == 429) return new AiCallException(AiCallException.Kind.RATE, cause);
+        if (code == 503) return new AiCallException(AiCallException.Kind.OTHER, "Gemini 가 지금 붐빕니다 — 잠시 뒤 다시 시도하거나 다른 모델을 고르세요", cause);
         if (code == 404) return new AiCallException(AiCallException.Kind.OTHER, "모델을 쓸 수 없습니다" + (msg == null ? "" : ": " + msg), cause);
         return new AiCallException(AiCallException.Kind.OTHER, msg == null ? "HTTP " + code : msg, cause);
     }

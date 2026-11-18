@@ -49,6 +49,18 @@ public class AiAdminController {
         }
     }
 
+    /** 저장된 키로 Gemini 모델 목록을 받아 옴 (키가 Gemini 키여야 함) */
+    @GetMapping("/gemini-models")
+    public java.util.List<ClaudeGateway.ModelOption> geminiModels() {
+        AiSettingService.Active a = settings.requireKey();
+        try {
+            return gateway.geminiModels(a.apiKey());
+        } catch (AiCallException e) {
+            log.warn("Gemini 모델 목록 실패 kind={}", e.kind(), e.getCause());
+            throw new com.kopens.factory3d.common.BadRequestException("모델 목록을 받지 못했습니다: " + e.getMessage());
+        }
+    }
+
     @GetMapping
     public AiSettingService.View view() {
         return settings.view();

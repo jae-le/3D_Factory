@@ -90,6 +90,11 @@ public class FakeGateway implements ClaudeGateway {
     }
 
     @Override
+    public java.util.List<ModelOption> geminiModels(String apiKey) {
+        return java.util.List.of(new ModelOption("gemini-3.8-flash", "Gemini 3.8 Flash"), new ModelOption("gemini-3.8-flash-lite", "Gemini 3.8 Flash-Lite"));
+    }
+
+    @Override
     public Ping ping(String apiKey, String model) {
         if (apiKey != null && apiKey.contains("invalid")) throw new AiCallException(AiCallException.Kind.KEY, null);
         return new Ping(model, 5, new Usage(model, 20, 5, 0, 0));

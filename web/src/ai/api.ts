@@ -48,6 +48,8 @@ export const saveAiSettings = (patch: Partial<Pick<AiSettings, 'model' | 'monthl
 export const setAiKey = (apiKey: string) => apiSend<AiSettings>('PUT', '/api/admin/ai/key', { apiKey })
 export const deleteAiKey = () => apiSend<AiSettings>('DELETE', '/api/admin/ai/key')
 export const testAi = () => apiSend<AiTestResult>('POST', '/api/admin/ai/test')
+/** 저장된 (Gemini) 키로 쓸 수 있는 모델 목록 */
+export const getGeminiModels = () => apiJson<{ id: string; label: string }[]>('/api/admin/ai/gemini-models')
 
 export function getUsage(group: 'day' | 'user', from?: string, to?: string): Promise<UsageReport> {
   const q = new URLSearchParams({ group })

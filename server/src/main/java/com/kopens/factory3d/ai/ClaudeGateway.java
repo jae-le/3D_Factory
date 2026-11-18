@@ -29,4 +29,11 @@ public interface ClaudeGateway {
 
     /** 연결 테스트 (짧은 호출) */
     Ping ping(String apiKey, String model);
+
+    record ModelOption(String id, String label) {}
+
+    /** 이 키로 쓸 수 있는 Gemini 모델 (글 생성 가능한 것만). Gemini 를 모르는 게이트웨이는 빈 목록 */
+    default java.util.List<ModelOption> geminiModels(String apiKey) {
+        return java.util.List.of();
+    }
 }

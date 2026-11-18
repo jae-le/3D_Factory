@@ -42,7 +42,8 @@ class GeminiGatewayTest {
         server.createContext("/", ex -> {
             paths.add(ex.getRequestURI().toString());
             keys.add(ex.getRequestHeaders().getFirst("x-goog-api-key"));
-            bodies.add(JsonMapper.builder().build().readTree(ex.getRequestBody().readAllBytes()));
+            byte[] in = ex.getRequestBody().readAllBytes();
+            bodies.add(in.length == 0 ? null : JsonMapper.builder().build().readTree(in));
             Reply r = replies.poll();
             byte[] b = r.body().getBytes(StandardCharsets.UTF_8);
             ex.sendResponseHeaders(r.status(), b.length);
@@ -51,6 +52,7 @@ class GeminiGatewayTest {
         });
         server.start();
         g = new GeminiGateway("http://127.0.0.1:" + server.getAddress().getPort() + "/v1beta");
+        g.retryWaitsMs = new long[] {1, 1};
     }
 
     @AfterEach
@@ -134,7 +136,7 @@ class GeminiGatewayTest {
                 + "\"details\":[{\"reason\":\"API_KEY_INVALID\"}]}}"));
         assertThatThrownBy(() -> g.ping("bad", "gemini-2.5-flash")).isInstanceOf(AiCallException.class)
                 .satisfies(e -> assertThat(((AiCallException) e).kind()).isEqualTo(AiCallException.Kind.KEY));
-        replies.add(new Reply(429, "{\"error\":{\"code\":429,\"message\":\"quota\",\"status\":\"RESOURCE_EXHAUSTED\"}}"));
+        for (int i = 0; i < 3; i++) replies.add(new Reply(429, "{\"error\":{\"code\":429,\"message\":\"quota\",\"status\":\"RESOURCE_EXHAUSTED\"}}"));
         assertThatThrownBy(() -> g.ping("k", "gemini-2.5-flash"))
                 .satisfies(e -> assertThat(((AiCallException) e).kind()).isEqualTo(AiCallException.Kind.RATE));
         replies.add(new Reply(404, "{\"error\":{\"code\":404,\"message\":\"not found\",\"status\":\"NOT_FOUND\"}}"));
@@ -163,5 +165,29 @@ class GeminiGatewayTest {
         assertThat(bodies.get(0).at("/contents/0/parts/0/text").asString()).isEqualTo("첫 질문");
         assertThat(RoutingGateway.isGemini("gemini-2.5-flash")).isTrue();
         assertThat(RoutingGateway.isGemini("claude-opus-5-5")).isFalse();
+    }
+
+    @Test
+    void 붐비면_두_번까지_다시_시도() {
+        String busy = "{\"error\":{\"code\":503,\"message\":\"high demand\",\"status\":\"UNAVAILABLE\"}}";
+        replies.add(new Reply(503, busy));
+        replies.add(new Reply(503, busy));
+        replies.add(new Reply(200, "{\"usageMetadata\":{\"promptTokenCount\":3,\"candidatesTokenCount\":1}}"));
+        assertThat(g.ping("k", "gemini-3.8-flash").usage().input()).isEqualTo(3);
+        assertThat(paths).hasSize(3);
+        for (int i = 0; i < 3; i++) replies.add(new Reply(503, busy));
+        assertThatThrownBy(() -> g.ping("k", "gemini-3.8-flash")).hasMessageContaining("붐빕니다");
+        assertThat(paths).hasSize(6);
+    }
+
+    @Test
+    void 모델_목록은_글_생성_가능한_gemini_만() {
+        replies.add(new Reply(200, "{\"models\":["
+                + "{\"name\":\"models/gemini-3.8-flash\",\"displayName\":\"Gemini 3.8 Flash\",\"supportedGenerationMethods\":[\"generateContent\",\"countTokens\"]},"
+                + "{\"name\":\"models/gemini-embedding-2\",\"displayName\":\"Embedding\",\"supportedGenerationMethods\":[\"embedContent\"]},"
+                + "{\"name\":\"models/imagen-5\",\"displayName\":\"Imagen\",\"supportedGenerationMethods\":[\"generateContent\"]}]}"));
+        assertThat(g.geminiModels("k")).containsExactly(new ClaudeGateway.ModelOption("gemini-3.8-flash", "Gemini 3.8 Flash"));
+        assertThat(paths.get(0)).isEqualTo("/v1beta/models?pageSize=200");
+        assertThat(keys.get(0)).isEqualTo("k");
     }
 }
