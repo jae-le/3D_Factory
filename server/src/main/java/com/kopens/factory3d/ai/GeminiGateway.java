@@ -231,7 +231,7 @@ public class GeminiGateway implements ClaudeGateway {
         RuntimeException cause = new RuntimeException("Gemini HTTP " + code + " " + status + ": " + msg);
         if (code == 401 || code == 403 || raw.contains("API_KEY_INVALID")) return new AiCallException(AiCallException.Kind.KEY, cause);
         if (code == 429) return new AiCallException(AiCallException.Kind.RATE, cause);
-        if (code == 404) return new AiCallException(AiCallException.Kind.OTHER, "모델을 찾을 수 없습니다 — 모델 이름을 확인하세요", cause);
+        if (code == 404) return new AiCallException(AiCallException.Kind.OTHER, "모델을 쓸 수 없습니다" + (msg == null ? "" : ": " + msg), cause);
         return new AiCallException(AiCallException.Kind.OTHER, msg == null ? "HTTP " + code : msg, cause);
     }
 }

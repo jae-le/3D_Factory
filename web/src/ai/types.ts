@@ -32,8 +32,7 @@ export const AI_MODELS: { id: AiModel; label: string; price: string }[] = [
   { id: 'claude-opus-5-5', label: 'Claude Opus 5.5', price: '입력 $4 · 출력 $20 / 1M 토큰' },
   { id: 'claude-sonnet-5-5', label: 'Claude Sonnet 5.5', price: '입력 $2 · 출력 $10 / 1M 토큰' },
   { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', price: '입력 $0.10 · 출력 $0.50 / 1M 토큰' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash (무료 등급)', price: '무료 등급: 비용 0 · 호출 수 제한 · 입력이 Google 서비스 개선에 쓰일 수 있음' },
-  { id: 'gemini-2.5-flash-lite', label: 'Gemini 2.5 Flash-Lite (무료 등급)', price: '무료 등급: 비용 0 · 호출 수 제한 · 입력이 Google 서비스 개선에 쓰일 수 있음' },
+  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (무료 등급)', price: '무료 등급: 비용 0 · 호출 수 제한 · 입력이 Google 서비스 개선에 쓰일 수 있음' },
 ]
 export interface AiSettings { hasKey: boolean; keyHint: string | null; model: AiModel; monthlyLimitUsd: number; enabled: boolean; masterKey: boolean; updatedBy: string | null; updatedAt: string }
 export interface AiTestResult { ok: boolean; model: string | null; latencyMs: number | null; message: string | null }

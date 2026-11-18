@@ -138,7 +138,7 @@ class GeminiGatewayTest {
         assertThatThrownBy(() -> g.ping("k", "gemini-2.5-flash"))
                 .satisfies(e -> assertThat(((AiCallException) e).kind()).isEqualTo(AiCallException.Kind.RATE));
         replies.add(new Reply(404, "{\"error\":{\"code\":404,\"message\":\"not found\",\"status\":\"NOT_FOUND\"}}"));
-        assertThatThrownBy(() -> g.ping("k", "gemini-9")).hasMessageContaining("모델을 찾을 수 없습니다");
+        assertThatThrownBy(() -> g.ping("k", "gemini-9")).hasMessageContaining("모델을 쓸 수 없습니다: not found");
     }
 
     @Test
