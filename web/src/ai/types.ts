@@ -15,7 +15,7 @@ export interface ChatEntry { id: number; at: string; role: 'user' | 'ai'; text: 
 
 export type ChangeKind =
   | 'placement.move' | 'placement.rotate' | 'placement.rename' | 'placement.update' | 'placement.add' | 'placement.delete'
-  | 'station.update' | 'plan.partition.add' | 'plan.partition.delete' | 'plan.zone.rename'
+  | 'station.update' | 'plan.partition.add' | 'plan.partition.delete' | 'plan.zone.rename' | 'plan.text.rename'
 export interface PlacementSnap { id?: number; name: string; modelId?: number | null; x: number; y: number; rot: number; hintLabel?: string }
 export interface PartitionSnap { id: string; pts: [number, number][]; h: number; t: number }
 export interface ProposalItem { seq: number; kind: ChangeKind; target: string; targetKey: string; before: unknown; after: unknown; label: string }

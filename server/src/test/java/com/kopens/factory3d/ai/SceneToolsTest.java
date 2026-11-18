@@ -18,7 +18,7 @@ class SceneToolsTest extends AiTestBase {
     @Test
     void 도구_목록은_9개_strict_스키마() {
         assertThat(tools.specs()).extracting(ClaudeGateway.ToolSpec::name).containsExactly("get_scene", "move_object", "rotate_object",
-                "add_object", "delete_object", "rename_object", "set_station", "edit_partition", "rename_zone");
+                "add_object", "delete_object", "rename_object", "set_station", "edit_partition", "rename_zone", "rename_text");
         assertThat(tools.specs()).allSatisfy(s -> assertThat(s.inputSchemaJson()).contains("\"additionalProperties\":false"));
     }
 
@@ -132,5 +132,17 @@ class SceneToolsTest extends AiTestBase {
         assertThat(cs.items()).hasSize(1);
         assertThat(cs.version()).isGreaterThan(v);
         assertThat(cs.nextSeq()).isEqualTo(2);
+    }
+
+    @Test
+    void 도면_글자_바꾸기_제안() {
+        assertThat(run("get_scene", "{}").content()).contains("\"texts\":[{\"id\":\"t0\",\"text\":\"Station (미표기)\",\"layer\":\"STATION\"");
+        assertThat(run("rename_text", "{\"text\":\"없는 글자\",\"newText\":\"x\"}").isError()).isTrue();
+        assertThat(run("rename_text", "{\"text\":\"Station (미표기)\",\"newText\":\"Main Station 1-2\"}").isError()).isFalse();
+        assertThat(cs.items()).extracting(Changeset.Item::kind).containsExactly("plan.text.rename");
+        assertThat(cs.items().getFirst().targetKey()).isEqualTo("text:0");
+        assertThat(run("get_scene", "{}").content()).contains("\"text\":\"Main Station 1-2\"");
+        run("rename_text", "{\"id\":\"t0\",\"newText\":\"Station (미표기)\"}"); // 원래대로 → 제안 지움
+        assertThat(cs.items()).isEmpty();
     }
 }

@@ -176,6 +176,12 @@ public class ApplyService {
                 if (!parts.get(i).equals(it.before())) return CHANGED;
                 parts.remove(i);
             }
+            case "plan.text.rename" -> {
+                ObjectNode t = PlanEdits.text(plan, it.after().path("index").asInt(-1));
+                if (t == null) return "글자가 이미 없습니다";
+                if (!t.path("str").asString("").equals(text(it.before(), "str"))) return CHANGED;
+                t.put("str", text(it.after(), "str"));
+            }
             case "plan.zone.rename" -> {
                 ObjectNode z = PlanEdits.zone(plan, text(it.after(), "id"));
                 if (z == null) return "구역이 이미 없습니다";

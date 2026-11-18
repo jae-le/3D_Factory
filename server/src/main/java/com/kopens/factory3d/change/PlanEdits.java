@@ -17,6 +17,12 @@ public final class PlanEdits {
         return -1;
     }
 
+    /** 도면 글자(DXF TEXT) i 번째. id 가 없어 배열 순서로 가리킴 (글자 바꾸기는 순서를 바꾸지 않음) */
+    public static ObjectNode text(ObjectNode plan, int index) {
+        JsonNode t = plan.path("texts").path(index);
+        return t instanceof ObjectNode o ? o : null;
+    }
+
     public static ObjectNode zone(ObjectNode plan, String id) {
         for (JsonNode z : plan.path("zones")) if (id.equals(z.path("id").asString()) && z instanceof ObjectNode o) return o;
         return null;

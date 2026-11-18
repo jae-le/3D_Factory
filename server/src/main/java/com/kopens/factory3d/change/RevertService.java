@@ -142,6 +142,11 @@ public class RevertService {
                 if (PlanEdits.indexOf(parts, text(before, "id")) >= 0) throw new ConflictException(LATER);
                 parts.add(before.deepCopy());
             }
+            case "plan.text.rename" -> {
+                ObjectNode t = PlanEdits.text(plan, after.path("index").asInt(-1));
+                if (t == null || !t.path("str").asString("").equals(text(after, "str"))) throw new ConflictException(LATER);
+                t.put("str", text(before, "str"));
+            }
             case "plan.zone.rename" -> {
                 ObjectNode z = PlanEdits.zone(plan, text(after, "id"));
                 if (z == null || !z.path("name").asString().equals(text(after, "name"))) throw new ConflictException(LATER);

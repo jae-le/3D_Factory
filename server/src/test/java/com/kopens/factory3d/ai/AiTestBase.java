@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
  */
 abstract class AiTestBase extends IntegrationTest {
     static final String PLAN = "{\"format\":1,\"bounds\":{\"w\":40,\"h\":20},\"lines\":[],"
+            + "\"texts\":[{\"str\":\"Station (미표기)\",\"x\":3,\"y\":3,\"h\":0.8,\"layer\":\"STATION\"},{\"str\":\"출하\",\"x\":30,\"y\":3,\"h\":0.8,\"layer\":\"ZONE\"}],"
             + "\"partitions\":[{\"id\":\"p1\",\"pts\":[[1,1],[5,1]],\"h\":1.2,\"t\":0.5}],"
             + "\"zones\":[{\"id\":\"z1\",\"name\":\"조립 구역\",\"poly\":[[0,0],[10,0],[10,5],[0,5]],\"color\":\"#88aaff\",\"stationId\":null}]}";
 

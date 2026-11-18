@@ -163,4 +163,15 @@ class ApplyRevertApiTest extends AiTestBase {
     void 비표준_uuid_는_404() throws Exception {
         revert("1-1-1-1-1", ADMIN).andExpect(status().isNotFound()).andExpect(jsonPath("$.detail").value("변경 묶음을 찾을 수 없습니다."));
     }
+
+    @Test
+    void 도면_글자_적용과_되돌리기() throws Exception {
+        String b = propose("kim", "글자 'Station (미표기)' 를 'Main Station 1-2' 로 바꿔줘");
+        apply(b, KIM).andExpect(status().isOk()).andExpect(jsonPath("$.applied").value(1));
+        assertThat(jdbc.queryForObject("select plan->'texts'->0->>'str' from drawing where id = ?", String.class, drawing)).isEqualTo("Main Station 1-2");
+        assertThat(jdbc.queryForObject("select plan->'texts'->1->>'str' from drawing where id = ?", String.class, drawing)).isEqualTo("출하");
+        assertThat(jdbc.queryForObject("select kind from change_log where batch_id = cast(? as uuid)", String.class, b)).isEqualTo("plan.text.rename");
+        revert(b, KIM).andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("select plan->'texts'->0->>'str' from drawing where id = ?", String.class, drawing)).isEqualTo("Station (미표기)");
+    }
 }
