@@ -144,8 +144,7 @@ export function AiSettingsPage() {
               <input className="kp-input" type="number" min={0} step={1} value={form.daily} onChange={(e) => setForm({ ...form, daily: e.target.value })} />
             </label>
             <span className="kp-help">
-              {s?.geminiToday != null && s.model === form.model ? `오늘 ${s.geminiToday} / ${s.geminiDailyLimit}회 사용 · ` : ''}
-              무료 등급의 모델별 하루 한도입니다 (AI Studio › 비율 제한의 RPD). 미국 태평양 시간 자정(한국 오후 4~5시)에 초기화되고, 닿으면 챗봇이 멈춥니다. 질문 하나에 도구를 쓰면 여러 번 셉니다.
+              오늘 사용 수는 AI 사용량에서 봅니다. 무료 등급의 모델별 하루 한도입니다 (AI Studio › 비율 제한의 RPD). 미국 태평양 시간 자정(한국 오후 4~5시)에 초기화되고, 닿으면 챗봇이 멈춥니다. 질문 하나에 도구를 쓰면 여러 번 셉니다.
             </span>
           </>
         )}

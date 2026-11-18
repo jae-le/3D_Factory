@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
-import { getUsage } from '../../ai/api'
-import type { UsageReport, UsageRow } from '../../ai/types'
+import { getAiSettings, getUsage } from '../../ai/api'
+import type { AiSettings, UsageReport, UsageRow } from '../../ai/types'
 
 const tok = (v: number) => v.toLocaleString('ko-KR')
 const usd = (v: number) => (v < 1 && v > 0 ? v.toFixed(4) : v.toFixed(2))
@@ -50,6 +50,7 @@ export function AiUsagePage() {
   const [day, setDay] = useState<UsageReport | null>(null)
   const [user, setUser] = useState<UsageReport | null>(null)
   const [byModel, setByModel] = useState<UsageReport | null>(null)
+  const [setting, setSetting] = useState<AiSettings | null>(null)
   const [error, setError] = useState<string | null>(null)
   const load = useCallback(() => {
     Promise.all([getUsage('day', applied.from, applied.to), getUsage('user', applied.from, applied.to), getUsage('model', applied.from, applied.to)])
@@ -58,6 +59,7 @@ export function AiUsagePage() {
         setDay(d)
         setUser(u)
         setByModel(m)
+        getAiSettings().then(setSetting).catch(() => setSetting(null))
       })
       .catch((e: Error) => setError(e.message))
   }, [applied])
@@ -90,6 +92,25 @@ export function AiUsagePage() {
               {tok(m.inputTokens)} · {tok(m.outputTokens)}
             </strong>
           </div>
+          {setting?.geminiToday != null && (
+            <div className="usage-cost">
+              <span>오늘 Gemini 요청 / 하루 한도 (RPD · {setting.model})</span>
+              <strong>
+                {tok(setting.geminiToday)} / {tok(setting.geminiDailyLimit)}
+              </strong>
+              <div
+                className={`usage-bar ${setting.geminiToday >= setting.geminiDailyLimit ? 'bad' : setting.geminiToday >= setting.geminiDailyLimit * 0.8 ? 'warn' : 'ok'}`}
+                role="meter"
+                aria-label="오늘 Gemini 요청 / 하루 한도"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={Math.min(100, setting.geminiDailyLimit > 0 ? Math.round((setting.geminiToday / setting.geminiDailyLimit) * 100) : 100)}
+              >
+                <span style={{ width: `${Math.min(100, setting.geminiDailyLimit > 0 ? (setting.geminiToday / setting.geminiDailyLimit) * 100 : 100)}%` }} />
+              </div>
+              <small className="kp-help">미국 태평양 시간 자정(한국 오후 4~5시)에 초기화 · 자동 재시도는 세지 않아 AI Studio 숫자가 조금 더 클 수 있음</small>
+            </div>
+          )}
           <div className="usage-cost">
             <span>비용 / 한도</span>
             <strong>

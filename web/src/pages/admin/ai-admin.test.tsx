@@ -133,6 +133,7 @@ describe('관리자 › AI', () => {
         return json(200, { month, limitUsd: 50, from: '2026-11-01', to: '2026-11-13', group: 'day', rows: [{ ...month, key: '2026-11-13', calls: 1, costUsd: 1.5 }, { ...month, key: '2026-11-01', calls: 2, costUsd: 1.5 }] })
       if (url.startsWith('/api/admin/ai/usage?group=user'))
         return json(200, { month, limitUsd: 50, from: '2026-11-01', to: '2026-11-13', group: 'user', rows: [{ ...month, key: 'kim', calls: 2, costUsd: 2 }, { ...month, key: 'lee', calls: 1, costUsd: 1 }] })
+      if (url === '/api/admin/ai') return json(200, { ...SETTINGS, model: 'gemini-3.8-flash', geminiDailyLimit: 500, geminiToday: 420 })
       if (url.startsWith('/api/admin/ai/usage?group=model'))
         return json(200, { month, limitUsd: 50, from: '2026-11-01', to: '2026-11-13', group: 'model', rows: [{ ...month, key: 'gemini-3.8-flash', calls: 3, costUsd: 0 }] })
       return null
@@ -140,6 +141,8 @@ describe('관리자 › AI', () => {
     expect(await screen.findByText('$3.00 / $50.00')).toBeInTheDocument()
     expect(screen.getByRole('meter', { name: '이번 달 비용 / 한도' })).toHaveAttribute('aria-valuenow', '6')
     expect(within(screen.getByRole('table', { name: '모델별 사용량' })).getByText('gemini-3.8-flash')).toBeInTheDocument()
+    expect(await screen.findByText('420 / 500')).toBeInTheDocument()
+    expect(screen.getByRole('meter', { name: '오늘 Gemini 요청 / 하루 한도' })).toHaveAttribute('aria-valuenow', '84')
     const day = screen.getByRole('table', { name: '일별 사용량' })
     expect(within(day).getByText('2026-11-13')).toBeInTheDocument()
     const users = screen.getByRole('table', { name: '사용자별 사용량' })
