@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef } from 'react'
-import { applyProposal, discardProposal, resetChat, revertBatch, streamChat } from './api'
+import { applyProposal, discardProposal, getChatHistory, resetChat, revertBatch, startNewChat, streamChat } from './api'
 import { chatReducer, initialChat, type ChatState } from './chat'
 
 export interface Chat {
@@ -22,6 +22,17 @@ export function useChat(drawingId: number | null, onApplied: () => void): Chat {
     stateRef.current = state
     appliedCb.current = onApplied
   })
+  // 지난 대화 불러오기 (화면에 보이기만 — AI 는 이 서버 실행 동안의 대화만 기억)
+  useEffect(() => {
+    if (drawingId == null) return
+    let cancel = false
+    getChatHistory(drawingId)
+      .then((entries) => !cancel && dispatch({ type: 'load', entries }))
+      .catch(() => {})
+    return () => {
+      cancel = true
+    }
+  }, [drawingId])
   useEffect(
     () => () => {
       abort.current?.abort()
@@ -88,7 +99,7 @@ export function useChat(drawingId: number | null, onApplied: () => void): Chat {
     abort.current = null
     busy.current = false
     dispatch({ type: 'reset' })
-    if (drawingId != null) void resetChat(drawingId).catch(() => {})
+    if (drawingId != null) void startNewChat(drawingId).catch(() => {})
   }, [drawingId])
 
   return { state, send, apply, discard, revert, newChat }

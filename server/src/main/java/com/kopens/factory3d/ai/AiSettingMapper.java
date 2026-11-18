@@ -15,7 +15,7 @@ public interface AiSettingMapper {
     void updateKey(@Param("enc") byte[] enc, @Param("hint") String hint, @Param("by") String by);
 
     void update(@Param("model") String model, @Param("limit") BigDecimal limit, @Param("enabled") boolean enabled,
-            @Param("by") String by);
+            @Param("daily") int daily, @Param("by") String by);
 
     final class Row {
         public byte[] apiKeyEnc;
@@ -23,6 +23,7 @@ public interface AiSettingMapper {
         public String model;
         public BigDecimal monthlyLimitUsd;
         public boolean enabled;
+        public int geminiDailyLimit;
         public String updatedBy;
         public OffsetDateTime updatedAt;
     }

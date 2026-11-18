@@ -18,10 +18,11 @@ public class AiSettingService {
     static final BigDecimal MAX_LIMIT = new BigDecimal("99999999.99");
 
     /** 화면용 (키 평문은 절대 넣지 않음) */
+    /** geminiToday: 지금 모델이 Gemini 면 오늘(태평양 시간) 호출 수, 아니면 null */
     public record View(boolean hasKey, String keyHint, String model, BigDecimal monthlyLimitUsd, boolean enabled, boolean masterKey,
-            String updatedBy, OffsetDateTime updatedAt) {}
+            int geminiDailyLimit, Long geminiToday, String updatedBy, OffsetDateTime updatedAt) {}
 
-    public record Update(String model, BigDecimal monthlyLimitUsd, Boolean enabled) {}
+    public record Update(String model, BigDecimal monthlyLimitUsd, Boolean enabled, Integer geminiDailyLimit) {}
 
     public record Status(boolean enabled, String reason) {}
 
@@ -42,7 +43,9 @@ public class AiSettingService {
 
     public View view() {
         AiSettingMapper.Row r = row();
-        return new View(r.apiKeyEnc != null, r.keyHint, r.model, r.monthlyLimitUsd, r.enabled, crypto.available(), r.updatedBy, r.updatedAt);
+        Long today = RoutingGateway.isGemini(r.model) ? usage.todayCalls(r.model) : null;
+        return new View(r.apiKeyEnc != null, r.keyHint, r.model, r.monthlyLimitUsd, r.enabled, crypto.available(), r.geminiDailyLimit, today,
+                r.updatedBy, r.updatedAt);
     }
 
     @Transactional
@@ -54,8 +57,10 @@ public class AiSettingService {
         BigDecimal limit = u.monthlyLimitUsd() == null ? r.monthlyLimitUsd : u.monthlyLimitUsd();
         if (limit.signum() < 0 || limit.compareTo(MAX_LIMIT) > 0) throw new BadRequestException("월 한도는 0 이상 USD 로 입력하세요.");
         boolean enabled = u.enabled() == null ? r.enabled : u.enabled();
+        int daily = u.geminiDailyLimit() == null ? r.geminiDailyLimit : u.geminiDailyLimit();
+        if (daily < 0 || daily > 1_000_000) throw new BadRequestException("Gemini 하루 한도는 0 이상으로 입력하세요.");
         limit = limit.setScale(2, RoundingMode.HALF_UP);
-        mapper.update(model, limit, enabled, by);
+        mapper.update(model, limit, enabled, daily, by);
         audit.log("AI_SETTING", model, "limit=" + limit.toPlainString() + " enabled=" + enabled);
         return view();
     }
@@ -85,6 +90,7 @@ public class AiSettingService {
         AiSettingMapper.Row r = row();
         boolean overLimit = usage.monthCost().compareTo(r.monthlyLimitUsd) >= 0;
         String reason = reason(crypto.available(), r.apiKeyEnc != null, r.enabled, overLimit);
+        if (reason == null && RoutingGateway.isGemini(r.model) && usage.todayCalls(r.model) >= r.geminiDailyLimit) reason = "over-daily";
         return new Status(reason == null, reason);
     }
 
@@ -115,6 +121,7 @@ public class AiSettingService {
             case "no-key" -> "AI API 키가 등록되지 않았습니다 (관리자 › AI API 관리)";
             case "disabled" -> "AI 챗봇이 사용 중지되어 있습니다 (관리자 › AI API 관리)";
             case "over-limit" -> "이번 달 AI 사용 한도를 넘었습니다";
+            case "over-daily" -> "오늘 Gemini 무료 요청 한도(RPD)에 닿았습니다 — 미국 태평양 시간 자정(한국 오후 4~5시)에 다시 열립니다";
             default -> "AI 챗봇을 쓸 수 없습니다";
         };
     }

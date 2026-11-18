@@ -42,6 +42,7 @@ function show(user: User, status: unknown = { enabled: true, reason: null }) {
     if (url === '/api/models') return json(200, MODELS)
     if (url === '/api/drawings/1/placements') return json(200, PLACEMENTS)
     if (url === '/api/ai/chat') return new Response(STREAM, { status: 200 })
+    if (url.startsWith('/api/ai/chat/history')) return json(200, [])
     return new Response(null, { status: 204 })
   }))
   render(

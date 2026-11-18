@@ -43,8 +43,8 @@ class AiUsageApiTest extends AiTestBase {
                 .andExpect(jsonPath("$.rows[0].key").value("kim"))
                 .andExpect(jsonPath("$.rows[0].inputTokens").value(4000)) // 비용 큰 사용자 먼저
                 .andExpect(jsonPath("$.rows[0].calls").value(2));
-        mvc.perform(get("/api/admin/ai/usage?group=model").with(ADMIN)).andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.detail").value("group 은 day 또는 user 입니다."));
+        mvc.perform(get("/api/admin/ai/usage?group=project").with(ADMIN)).andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.detail").value("group 은 day, user, model 중 하나입니다."));
         mvc.perform(get("/api/admin/ai/usage?from=2026-11-10&to=2026-11-01").with(ADMIN)).andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.detail").value("기간이 올바르지 않습니다."));
         mvc.perform(get("/api/admin/ai/usage").with(KIM)).andExpect(status().isForbidden());

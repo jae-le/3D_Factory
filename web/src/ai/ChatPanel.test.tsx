@@ -26,6 +26,7 @@ function setup(chatResponse: () => Response = () => new Response(STREAM, { statu
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     calls.push({ url, method: init?.method ?? 'GET', body: init?.body ? JSON.parse(String(init.body)) : null })
     if (url === '/api/ai/chat') return chatResponse()
+    if (url.startsWith('/api/ai/chat/history')) return new Response('[]', { status: 200, headers: { 'Content-Type': 'application/json' } })
     if (url.endsWith('/apply')) return json(200, { batchId: 'b1', drawingId: 1, applied: 1, skipped: [] })
     if (url.endsWith('/revert')) return json(200, { batchId: 'b1', reverted: 1 })
     return new Response(null, { status: 204 })
@@ -113,6 +114,6 @@ describe('AI 챗봇 패널', () => {
     await vi.waitFor(() => expect(screen.queryByRole('region', { name: '변경 제안' })).toBeNull())
     fireEvent.click(screen.getByRole('button', { name: '새 대화' }))
     expect(screen.queryByText('옮겨줘')).toBeNull()
-    expect(calls.some((c) => c.url === '/api/ai/chat/reset' && (c.body as { drawingId: number }).drawingId === 1)).toBe(true)
+    expect(calls.some((c) => c.url === '/api/ai/chat/new' && (c.body as { drawingId: number }).drawingId === 1)).toBe(true)
   })
 })

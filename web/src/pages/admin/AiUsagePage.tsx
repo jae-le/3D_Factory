@@ -49,13 +49,15 @@ export function AiUsagePage() {
   const [applied, setApplied] = useState({ from: '', to: '' })
   const [day, setDay] = useState<UsageReport | null>(null)
   const [user, setUser] = useState<UsageReport | null>(null)
+  const [byModel, setByModel] = useState<UsageReport | null>(null)
   const [error, setError] = useState<string | null>(null)
   const load = useCallback(() => {
-    Promise.all([getUsage('day', applied.from, applied.to), getUsage('user', applied.from, applied.to)])
-      .then(([d, u]) => {
+    Promise.all([getUsage('day', applied.from, applied.to), getUsage('user', applied.from, applied.to), getUsage('model', applied.from, applied.to)])
+      .then(([d, u, m]) => {
         setError(null)
         setDay(d)
         setUser(u)
+        setByModel(m)
       })
       .catch((e: Error) => setError(e.message))
   }, [applied])
@@ -115,6 +117,8 @@ export function AiUsagePage() {
       </form>
       <h3 className="ai-sub">일별</h3>
       {day ? <UsageTable label="일별 사용량" head="날짜" rows={day.rows} /> : <p className="kp-desc">불러오는 중…</p>}
+      <h3 className="ai-sub">모델별</h3>
+      {byModel ? <UsageTable label="모델별 사용량" head="모델" rows={byModel.rows} /> : <p className="kp-desc">불러오는 중…</p>}
       <h3 className="ai-sub">사용자별</h3>
       {user ? <UsageTable label="사용자별 사용량" head="사용자" rows={user.rows} /> : <p className="kp-desc">불러오는 중…</p>}
     </section>

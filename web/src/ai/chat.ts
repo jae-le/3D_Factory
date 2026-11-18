@@ -1,4 +1,4 @@
-import type { ApplyResult, ChatEvent, ChatUsage, Proposal, ProposalItem } from './types'
+import type { ApplyResult, ChatEntry, ChatEvent, ChatUsage, Proposal, ProposalItem } from './types'
 
 export interface ToolLine { name: string; label: string }
 export interface UserMsg { id: number; role: 'user'; text: string }
@@ -19,6 +19,7 @@ export type ChatAction =
   | { type: 'reverted' }
   | { type: 'proposalError'; message: string }
   | { type: 'reset' }
+  | { type: 'load'; entries: ChatEntry[] }
 
 export const initialChat = (): ChatState => ({ msgs: [], sending: false, proposal: null, nextId: 1 })
 
@@ -72,6 +73,15 @@ export function chatReducer(s: ChatState, a: ChatAction): ChatState {
     }
     case 'reset':
       return initialChat()
+    case 'load': {
+      if (s.msgs.length > 0 || !Array.isArray(a.entries) || a.entries.length === 0) return s // 이미 대화 중이면 덮지 않음
+      const msgs: Msg[] = a.entries.map((e, i): Msg =>
+        e.role === 'user'
+          ? { id: i + 1, role: 'user', text: e.text }
+          : { id: i + 1, role: 'ai', text: e.text, tools: e.tools.map((label) => ({ name: '', label })), error: e.error, done: true, usage: null },
+      )
+      return { ...s, msgs, nextId: msgs.length + 1 }
+    }
   }
 }
 

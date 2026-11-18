@@ -29,6 +29,7 @@
         <choose>
             <when test="by == 'day'">to_char(at at time zone #{zone}, 'YYYY-MM-DD')</when>
             <when test="by == 'user'">coalesce(username, '—')</when>
+            <when test="by == 'model'">model</when>
             <otherwise>'month'</otherwise>
         </choose> as key,
             count(*) as calls,
@@ -41,5 +42,10 @@
         where at &gt;= #{from} and at &lt; #{to}
         <if test="by == 'day'">group by 1 order by 1 desc</if>
         <if test="by == 'user'">group by 1 order by sum(cost_usd) desc, 1</if>
+        <if test="by == 'model'">group by 1 order by count(*) desc, 1</if>
+    </select>
+
+    <select id="countCalls" resultType="long">
+        select count(*) from ai_usage where model = #{model} and at &gt;= #{from}
     </select>
 </mapper>

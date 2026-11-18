@@ -1,6 +1,6 @@
 import { ApiError, apiErrorOf, apiJson, apiSend, csrfToken } from '../api/client'
 import { sseParser, toChatEvent } from './sse'
-import type { AiSettings, AiStatus, AiTestResult, ApplyResult, ChangePage, ChatEvent, UsageReport } from './types'
+import type { AiSettings, AiStatus, AiTestResult, ApplyResult, ChangePage, ChatEntry, ChatEvent, UsageReport } from './types'
 
 export const getAiStatus = () => apiJson<AiStatus>('/api/ai/status')
 
@@ -38,20 +38,24 @@ export async function streamChat(drawingId: number, message: string, onEvent: (e
 }
 
 export const resetChat = (drawingId: number) => apiSend<void>('POST', '/api/ai/chat/reset', { drawingId })
+/** 본인의 지금 대화 기록 (마지막 '새 대화' 뒤) */
+export const getChatHistory = (drawingId: number) => apiJson<ChatEntry[]>(`/api/ai/chat/history?drawingId=${drawingId}`)
+/** 새 대화: 기록에 경계 + AI 쪽 대화도 비움 */
+export const startNewChat = (drawingId: number) => apiSend<void>('POST', '/api/ai/chat/new', { drawingId })
 export const applyProposal = (id: string) => apiSend<ApplyResult>('POST', `/api/ai/changes/${id}/apply`)
 export const discardProposal = (id: string) => apiSend<void>('POST', `/api/ai/changes/${id}/discard`)
 export const revertBatch = (batchId: string) => apiSend<{ batchId: string; reverted: number }>('POST', `/api/changes/${batchId}/revert`)
 
 // 관리자
 export const getAiSettings = () => apiJson<AiSettings>('/api/admin/ai')
-export const saveAiSettings = (patch: Partial<Pick<AiSettings, 'model' | 'monthlyLimitUsd' | 'enabled'>>) => apiSend<AiSettings>('PUT', '/api/admin/ai', patch)
+export const saveAiSettings = (patch: Partial<Pick<AiSettings, 'model' | 'monthlyLimitUsd' | 'enabled' | 'geminiDailyLimit'>>) => apiSend<AiSettings>('PUT', '/api/admin/ai', patch)
 export const setAiKey = (apiKey: string) => apiSend<AiSettings>('PUT', '/api/admin/ai/key', { apiKey })
 export const deleteAiKey = () => apiSend<AiSettings>('DELETE', '/api/admin/ai/key')
 export const testAi = () => apiSend<AiTestResult>('POST', '/api/admin/ai/test')
 /** 저장된 (Gemini) 키로 쓸 수 있는 모델 목록 */
 export const getGeminiModels = () => apiJson<{ id: string; label: string }[]>('/api/admin/ai/gemini-models')
 
-export function getUsage(group: 'day' | 'user', from?: string, to?: string): Promise<UsageReport> {
+export function getUsage(group: 'day' | 'user' | 'model', from?: string, to?: string): Promise<UsageReport> {
   const q = new URLSearchParams({ group })
   if (from) q.set('from', from)
   if (to) q.set('to', to)

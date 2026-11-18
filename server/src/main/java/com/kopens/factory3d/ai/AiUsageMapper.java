@@ -12,7 +12,9 @@ public interface AiUsageMapper {
 
     BigDecimal sumCost(@Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to);
 
-    /** by = day | user | month(전체 한 줄) */
+    long countCalls(@Param("model") String model, @Param("from") OffsetDateTime from);
+
+    /** by = day | user | model | month(전체 한 줄) */
     List<UsageRow> group(@Param("by") String by, @Param("from") OffsetDateTime from, @Param("to") OffsetDateTime to,
             @Param("zone") String zone);
 

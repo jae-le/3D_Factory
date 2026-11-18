@@ -37,6 +37,14 @@ public class AiUsageService {
         return r.costUsd;
     }
 
+    /** Google 무료 등급 하루(RPD)는 미국 태평양 시간 자정에 초기화 */
+    static final ZoneId GOOGLE_DAY = ZoneId.of("America/Los_Angeles");
+
+    /** 이 모델의 오늘(태평양 시간) 호출 수 — 연결 테스트 포함 */
+    public long todayCalls(String model) {
+        return mapper.countCalls(model, LocalDate.now(GOOGLE_DAY).atStartOfDay(GOOGLE_DAY).toOffsetDateTime());
+    }
+
     public BigDecimal monthCost() {
         OffsetDateTime[] m = monthRange();
         return mapper.sumCost(m[0], m[1]);
@@ -53,7 +61,7 @@ public class AiUsageService {
     /** 기간 [from, to] (날짜 포함) 일별·사용자별 + 이번 달 합계. 기본 = 이번 달 1일 ~ 오늘, day */
     public Report report(LocalDate from, LocalDate to, String group, BigDecimal limitUsd) {
         String g = group == null || group.isBlank() ? "day" : group;
-        if (!g.equals("day") && !g.equals("user")) throw new BadRequestException("group 은 day 또는 user 입니다.");
+        if (!g.equals("day") && !g.equals("user") && !g.equals("model")) throw new BadRequestException("group 은 day, user, model 중 하나입니다.");
         LocalDate today = LocalDate.now(zone);
         LocalDate f = from == null ? today.withDayOfMonth(1) : from;
         LocalDate t = to == null ? today : to;

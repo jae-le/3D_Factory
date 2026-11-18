@@ -4,7 +4,7 @@
     <insert id="ensureRow">insert into ai_setting (id) values (1) on conflict (id) do nothing</insert>
 
     <select id="find" resultType="com.kopens.factory3d.ai.AiSettingMapper$Row">
-        select api_key_enc, key_hint, model, monthly_limit_usd, enabled, updated_by, updated_at from ai_setting where id = 1
+        select api_key_enc, key_hint, model, monthly_limit_usd, enabled, gemini_daily_limit, updated_by, updated_at from ai_setting where id = 1
     </select>
 
     <update id="updateKey">
@@ -14,7 +14,7 @@
     </update>
 
     <update id="update">
-        update ai_setting set model = #{model}, monthly_limit_usd = #{limit}, enabled = #{enabled},
+        update ai_setting set model = #{model}, monthly_limit_usd = #{limit}, enabled = #{enabled}, gemini_daily_limit = #{daily},
             updated_by = #{by,jdbcType=VARCHAR}, updated_at = now()
         where id = 1
     </update>

@@ -1,12 +1,15 @@
 /** AI 챗봇 · 변경 이력 · AI API 관리 (서버 응답 모양) */
-export type AiReason = 'no-master-key' | 'no-key' | 'disabled' | 'over-limit'
+export type AiReason = 'no-master-key' | 'no-key' | 'disabled' | 'over-limit' | 'over-daily'
 export interface AiStatus { enabled: boolean; reason: AiReason | null }
 export const REASON_TEXT: Record<AiReason, string> = {
   'no-master-key': '서버에 F3D_AI_MASTER_KEY 가 설정되지 않았습니다',
   'no-key': 'AI API 키가 등록되지 않았습니다 (관리자 › AI API 관리)',
   disabled: 'AI 챗봇이 사용 중지되어 있습니다 (관리자 › AI API 관리)',
   'over-limit': '이번 달 AI 사용 한도를 넘었습니다',
+  'over-daily': '오늘 Gemini 무료 요청 한도(RPD)에 닿았습니다 — 미국 태평양 시간 자정(한국 오후 4~5시)에 다시 열립니다',
 }
+/** 지난 대화 한 줄 (서버 기록) */
+export interface ChatEntry { id: number; at: string; role: 'user' | 'ai'; text: string; tools: string[]; error: string | null }
 
 export type ChangeKind =
   | 'placement.move' | 'placement.rotate' | 'placement.rename' | 'placement.update' | 'placement.add' | 'placement.delete'
@@ -34,7 +37,7 @@ export const AI_MODELS: { id: AiModel; label: string; price: string }[] = [
   { id: 'claude-haiku-5-5', label: 'Claude Haiku 5.5', price: '입력 $0.10 · 출력 $0.50 / 1M 토큰' },
   { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (무료 등급)', price: '무료 등급: 비용 0 · 호출 수 제한 · 입력이 Google 서비스 개선에 쓰일 수 있음' },
 ]
-export interface AiSettings { hasKey: boolean; keyHint: string | null; model: AiModel; monthlyLimitUsd: number; enabled: boolean; masterKey: boolean; updatedBy: string | null; updatedAt: string }
+export interface AiSettings { hasKey: boolean; keyHint: string | null; model: AiModel; monthlyLimitUsd: number; enabled: boolean; masterKey: boolean; geminiDailyLimit: number; geminiToday: number | null; updatedBy: string | null; updatedAt: string }
 export interface AiTestResult { ok: boolean; model: string | null; latencyMs: number | null; message: string | null }
 export interface UsageRow { key: string; calls: number; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number; costUsd: number }
 export interface UsageReport { month: UsageRow; limitUsd: number; rows: UsageRow[]; from: string; to: string; group: 'day' | 'user' }

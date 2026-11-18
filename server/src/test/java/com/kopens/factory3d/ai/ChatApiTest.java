@@ -22,6 +22,8 @@ class ChatApiTest extends AiTestBase {
 
     @Autowired ChatService chat;
     @Autowired ProposalStore store;
+    @Autowired ChatHistory history;
+    @Autowired AiUsageService usage;
 
     static class Rec implements ChatSink {
         final List<String> events = new ArrayList<>();
@@ -156,6 +158,44 @@ class ChatApiTest extends AiTestBase {
         assertThat(r.text.toString()).contains("작업이 길어 중간에 멈췄습니다.");
         assertThat(r.events.getLast()).isEqualTo("done");
         assertThat(r.events).doesNotContain("proposal");
+    }
+
+    @Test
+    void 질문과_답이_기록되고_새_대화면_지난_기록은_안_보임() {
+        enableAi();
+        Rec r = ask(MOVE);
+        List<ChatHistory.Entry> h = history.current("kim", drawing);
+        assertThat(h).extracting(ChatHistory.Entry::role).containsExactly("user", "ai");
+        assertThat(h.get(0).text()).isEqualTo(MOVE);
+        assertThat(h.get(1).text()).isEqualTo(r.text.toString());
+        assertThat(h.get(1).tools()).isEqualTo(r.tools);
+        assertThat(history.current("lee", drawing)).isEmpty(); // 본인 것만
+        history.newChat("kim", drawing);
+        assertThat(history.current("kim", drawing)).isEmpty();
+        ask("안녕");
+        assertThat(history.current("kim", drawing)).extracting(ChatHistory.Entry::text).first().isEqualTo("안녕");
+        assertThat(jdbc.queryForObject("select count(*) from ai_chat where role <> 'new'", Integer.class)).isEqualTo(4);
+    }
+
+    @Test
+    void 오류도_답으로_기록() {
+        ask("안녕");
+        assertThat(history.current("kim", drawing).get(1).error()).isEqualTo("AI API 키가 등록되지 않았습니다 (관리자 › AI API 관리)");
+    }
+
+    @Test
+    void Gemini_하루_한도에_닿으면_멈춤() {
+        enableAi();
+        settings.update(new AiSettingService.Update("gemini-3.8-flash", null, null, 2), "admin");
+        assertThat(settings.status().enabled()).isTrue();
+        usage.record("kim", drawing, "gemini-3.8-flash", 10, 5, 0, 0, "chat");
+        usage.record("kim", drawing, "claude-opus-5-5", 10, 5, 0, 0, "chat"); // 다른 모델은 안 셈
+        assertThat(settings.view().geminiToday()).isEqualTo(1);
+        usage.record("kim", drawing, "gemini-3.8-flash", 10, 5, 0, 0, "test");
+        assertThat(settings.status().reason()).isEqualTo("over-daily");
+        assertThat(ask("안녕").error).startsWith("오늘 Gemini 무료 요청 한도(RPD)에 닿았습니다");
+        assertThat(usage.report(null, null, "model", settings.view().monthlyLimitUsd()).rows())
+                .extracting(UsageRow::key).containsExactly("gemini-3.8-flash", "claude-opus-5-5");
     }
 
     @Test

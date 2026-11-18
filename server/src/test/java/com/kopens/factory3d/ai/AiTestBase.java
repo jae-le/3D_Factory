@@ -37,7 +37,7 @@ abstract class AiTestBase extends IntegrationTest {
     /** 키 등록 + 사용 (가짜 게이트웨이라 키 값은 쓰이지 않음) */
     void enableAi() {
         settings.setKey("sk-ant-api03-test-key-00000000abcd", "admin");
-        settings.update(new AiSettingService.Update(null, null, true), "admin");
+        settings.update(new AiSettingService.Update(null, null, true, null), "admin");
     }
 
     double placementX(long id) {

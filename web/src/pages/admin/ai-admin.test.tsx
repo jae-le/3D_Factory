@@ -9,7 +9,7 @@ import { summary } from './changeSummary'
 const ADMIN: User = { id: 1, username: 'admin', displayName: '관리자', role: 'ADMIN', enabled: true, mustChangePassword: false, locked: false, createdAt: '' }
 const json = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 type Call = { url: string; method: string; body: unknown }
-const SETTINGS = { hasKey: false, keyHint: null, model: 'claude-opus-5-5', monthlyLimitUsd: 50, enabled: false, masterKey: true, updatedBy: null, updatedAt: '2026-11-13T00:00:00Z' }
+const SETTINGS = { hasKey: false, keyHint: null, model: 'claude-opus-5-5', monthlyLimitUsd: 50, enabled: false, masterKey: true, geminiDailyLimit: 500, geminiToday: null, updatedBy: null, updatedAt: '2026-11-13T00:00:00Z' }
 
 function show(path: string, handler: (url: string, method: string, body: unknown) => Response | null) {
   const calls: Call[] = []
@@ -55,7 +55,7 @@ describe('관리자 › AI', () => {
     fireEvent.click(screen.getByLabelText('AI 챗봇 사용'))
     fireEvent.click(screen.getByRole('button', { name: '저장' }))
     expect(await screen.findByText('저장했습니다.')).toBeInTheDocument()
-    expect(calls.find((c) => c.url === '/api/admin/ai' && c.method === 'PUT')?.body).toEqual({ model: 'claude-sonnet-5-5', monthlyLimitUsd: 12.5, enabled: true })
+    expect(calls.find((c) => c.url === '/api/admin/ai' && c.method === 'PUT')?.body).toEqual({ model: 'claude-sonnet-5-5', monthlyLimitUsd: 12.5, enabled: true, geminiDailyLimit: 500 })
   })
 
   it('AI API 관리: 마스터 키가 없으면 경고 · 키 삭제는 확인 창', async () => {
@@ -133,10 +133,13 @@ describe('관리자 › AI', () => {
         return json(200, { month, limitUsd: 50, from: '2026-11-01', to: '2026-11-13', group: 'day', rows: [{ ...month, key: '2026-11-13', calls: 1, costUsd: 1.5 }, { ...month, key: '2026-11-01', calls: 2, costUsd: 1.5 }] })
       if (url.startsWith('/api/admin/ai/usage?group=user'))
         return json(200, { month, limitUsd: 50, from: '2026-11-01', to: '2026-11-13', group: 'user', rows: [{ ...month, key: 'kim', calls: 2, costUsd: 2 }, { ...month, key: 'lee', calls: 1, costUsd: 1 }] })
+      if (url.startsWith('/api/admin/ai/usage?group=model'))
+        return json(200, { month, limitUsd: 50, from: '2026-11-01', to: '2026-11-13', group: 'model', rows: [{ ...month, key: 'gemini-3.8-flash', calls: 3, costUsd: 0 }] })
       return null
     })
     expect(await screen.findByText('$3.00 / $50.00')).toBeInTheDocument()
     expect(screen.getByRole('meter', { name: '이번 달 비용 / 한도' })).toHaveAttribute('aria-valuenow', '6')
+    expect(within(screen.getByRole('table', { name: '모델별 사용량' })).getByText('gemini-3.8-flash')).toBeInTheDocument()
     const day = screen.getByRole('table', { name: '일별 사용량' })
     expect(within(day).getByText('2026-11-13')).toBeInTheDocument()
     const users = screen.getByRole('table', { name: '사용자별 사용량' })

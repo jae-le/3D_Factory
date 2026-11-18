@@ -20,12 +20,15 @@ public class ChatController {
     public record ResetBody(Long drawingId) {}
 
     private final ChatService chat;
+    private final ChatHistory history;
     private final ProposalStore store;
     private final ExecutorService executor;
     private final ObjectMapper json;
 
-    public ChatController(ChatService chat, ProposalStore store, @Qualifier("aiExecutor") ExecutorService executor, ObjectMapper json) {
+    public ChatController(ChatService chat, ChatHistory history, ProposalStore store, @Qualifier("aiExecutor") ExecutorService executor,
+            ObjectMapper json) {
         this.chat = chat;
+        this.history = history;
         this.store = store;
         this.executor = executor;
         this.json = json;
@@ -42,6 +45,22 @@ public class ChatController {
         long drawingId = body.drawingId();
         executor.execute(() -> chat.chat(user, drawingId, message, sink));
         return emitter;
+    }
+
+    /** 본인의 지금 대화 기록 (마지막 '새 대화' 뒤) */
+    @org.springframework.web.bind.annotation.GetMapping("/api/ai/chat/history")
+    public java.util.List<ChatHistory.Entry> history(@org.springframework.web.bind.annotation.RequestParam long drawingId, Authentication auth) {
+        return history.current(auth.getName(), drawingId);
+    }
+
+    /** 새 대화: 기록에 경계를 남기고 AI 쪽 대화도 비움 */
+    @PostMapping("/api/ai/chat/new")
+    public ResponseEntity<Void> newChat(@RequestBody ResetBody body, Authentication auth) {
+        if (body != null && body.drawingId() != null) {
+            store.reset(auth.getName(), body.drawingId());
+            history.newChat(auth.getName(), body.drawingId());
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/api/ai/chat/reset")

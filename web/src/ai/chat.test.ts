@@ -66,3 +66,18 @@ describe('챗 상태', () => {
     expect(chatReducer(s, { type: 'reset' })).toEqual(initialChat())
   })
 })
+
+describe('지난 대화 불러오기', () => {
+  it('빈 대화일 때만 기록으로 채우고 다음 id 를 이어 감', () => {
+    const entries = [
+      { id: 7, at: '', role: 'user' as const, text: '옮겨줘', tools: [], error: null },
+      { id: 8, at: '', role: 'ai' as const, text: '옮겼어요', tools: ['장면 확인'], error: null },
+    ]
+    const s = chatReducer(initialChat(), { type: 'load', entries })
+    expect(s.msgs.map((m) => m.text)).toEqual(['옮겨줘', '옮겼어요'])
+    expect(s.msgs[1]).toMatchObject({ role: 'ai', done: true, tools: [{ label: '장면 확인' }] })
+    expect(chatReducer(s, { type: 'send', text: '또' }).msgs.map((m) => m.id)).toEqual([1, 2, 3, 4])
+    expect(chatReducer(s, { type: 'load', entries: [] })).toBe(s)
+    expect(chatReducer(s, { type: 'load', entries })).toBe(s) // 이미 대화 중이면 덮지 않음
+  })
+})

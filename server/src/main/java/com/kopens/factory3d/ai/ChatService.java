@@ -33,10 +33,12 @@ public class ChatService {
     private final SceneTools tools;
     private final ProposalStore store;
     private final DrawingMapper drawings;
+    private final ChatHistory history;
     private final ZoneId zone;
 
     public ChatService(AiSettingService settings, AiUsageService usage, ClaudeGateway gateway, SceneTools tools, ProposalStore store,
-            DrawingMapper drawings, @Value("${factory3d.time-zone:Asia/Seoul}") String zone) {
+            DrawingMapper drawings, ChatHistory history, @Value("${factory3d.time-zone:Asia/Seoul}") String zone) {
+        this.history = history;
         this.settings = settings;
         this.usage = usage;
         this.gateway = gateway;
@@ -46,7 +48,59 @@ public class ChatService {
         this.zone = ZoneId.of(zone);
     }
 
-    public void chat(String user, long drawingId, String message, ChatSink sink) {
+    /** 기록을 남기며 응답 (질문 한 줄 + 답 한 줄: 글 · 도구 줄 · 오류) */
+    public void chat(String user, long drawingId, String message, ChatSink out) {
+        Recorder sink = new Recorder(out);
+        try {
+            chatInner(user, drawingId, message, sink);
+        } finally {
+            if (drawings.findById(drawingId) != null) {
+                history.add(user, drawingId, "user", message, null, null);
+                history.add(user, drawingId, "ai", sink.text.toString(), sink.tools, sink.error);
+            }
+        }
+    }
+
+    /** 받는 쪽에 그대로 넘기면서 글·도구 줄·오류를 모음 */
+    static final class Recorder implements ChatSink {
+        final ChatSink out;
+        final StringBuilder text = new StringBuilder();
+        final List<String> tools = new ArrayList<>();
+        String error;
+
+        Recorder(ChatSink out) {
+            this.out = out;
+        }
+
+        public void text(String chunk) {
+            text.append(chunk);
+            out.text(chunk);
+        }
+
+        public void tool(String name, String label) {
+            tools.add(label);
+            out.tool(name, label);
+        }
+
+        public void proposal(Changeset.View proposal) {
+            out.proposal(proposal);
+        }
+
+        public void done(Done done) {
+            out.done(done);
+        }
+
+        public void error(String message) {
+            error = message;
+            out.error(message);
+        }
+
+        public boolean closed() {
+            return out.closed();
+        }
+    }
+
+    private void chatInner(String user, long drawingId, String message, ChatSink sink) {
         String[] model = {null};
         try {
             AiSettingService.Status st = settings.status();

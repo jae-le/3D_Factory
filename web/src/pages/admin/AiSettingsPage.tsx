@@ -13,7 +13,7 @@ export function AiSettingsPage() {
   const [keyError, setKeyError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [test, setTest] = useState<AiTestResult | 'running' | null>(null)
-  const [form, setForm] = useState<{ model: AiModel; limit: string; enabled: boolean }>({ model: 'claude-opus-5-5', limit: '50', enabled: false })
+  const [form, setForm] = useState<{ model: AiModel; limit: string; enabled: boolean; daily: string }>({ model: 'claude-opus-5-5', limit: '50', enabled: false, daily: '500' })
   const [saved, setSaved] = useState<string | null>(null)
   const [gemini, setGemini] = useState<{ id: string; label: string }[]>([])
   const [geminiMsg, setGeminiMsg] = useState<string | null>(null)
@@ -29,7 +29,7 @@ export function AiSettingsPage() {
   const options = [...AI_MODELS.map((m) => ({ id: m.id, label: m.label })), ...gemini.filter((g) => !AI_MODELS.some((m) => m.id === g.id)).map((g) => ({ id: g.id, label: `${g.label} (${g.id})` }))]
   const take = (v: AiSettings) => {
     setS(v)
-    setForm({ model: v.model, limit: String(v.monthlyLimitUsd), enabled: v.enabled })
+    setForm({ model: v.model, limit: String(v.monthlyLimitUsd), enabled: v.enabled, daily: String(v.geminiDailyLimit) })
   }
   useEffect(() => {
     getAiSettings().then(take).catch((e: Error) => setError(e.message))
@@ -63,8 +63,10 @@ export function AiSettingsPage() {
     setSaved(null)
     const limit = Number(form.limit)
     if (!form.limit.trim() || !Number.isFinite(limit) || limit < 0) return setError('월 한도는 0 이상 USD 로 입력하세요.')
+    const daily = Number(form.daily)
+    if (!form.daily.trim() || !Number.isInteger(daily) || daily < 0) return setError('Gemini 하루 한도는 0 이상 정수로 입력하세요.')
     setError(null)
-    saveAiSettings({ model: form.model, monthlyLimitUsd: limit, enabled: form.enabled })
+    saveAiSettings({ model: form.model, monthlyLimitUsd: limit, enabled: form.enabled, geminiDailyLimit: daily })
       .then((v) => {
         take(v)
         setSaved('저장했습니다.')
@@ -135,6 +137,18 @@ export function AiSettingsPage() {
           {geminiMsg ?? 'Gemini 키를 저장한 뒤 누르면, 이 키로 쓸 수 있는 모델을 Google 에서 받아 목록에 넣습니다.'}
         </span>
         <span className="kp-help">{price}</span>
+        {form.model.startsWith('gemini-') && (
+          <>
+            <label className="kp-field">
+              <span>Gemini 하루 요청 한도 (RPD)</span>
+              <input className="kp-input" type="number" min={0} step={1} value={form.daily} onChange={(e) => setForm({ ...form, daily: e.target.value })} />
+            </label>
+            <span className="kp-help">
+              {s?.geminiToday != null && s.model === form.model ? `오늘 ${s.geminiToday} / ${s.geminiDailyLimit}회 사용 · ` : ''}
+              무료 등급의 모델별 하루 한도입니다 (AI Studio › 비율 제한의 RPD). 미국 태평양 시간 자정(한국 오후 4~5시)에 초기화되고, 닿으면 챗봇이 멈춥니다. 질문 하나에 도구를 쓰면 여러 번 셉니다.
+            </span>
+          </>
+        )}
         <label className="kp-field">
           <span>월 한도 (USD)</span>
           <input className="kp-input" type="number" min={0} step="0.01" value={form.limit} onChange={(e) => setForm({ ...form, limit: e.target.value })} />
