@@ -317,7 +317,10 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .chat-input textarea:focus { outline: 2px solid color-mix(in srgb, var(--primary) 60%, transparent); outline-offset: 0; }
 .chat-input button { flex: none; display: grid; place-items: center; width: 38px; height: 38px; border: 0; border-radius: 8px; background: var(--primary); color: #fff; }
 .chat-input button:disabled, .chat-input textarea:disabled { opacity: 0.5; }
-.chat-input .chat-attach-btn { background: transparent; color: var(--text-sub, inherit); border: 1px solid var(--line-strong); }
+.chat-input-box { position: relative; flex: 1; display: flex; min-width: 0; }
+.chat-input-box textarea { width: 100%; padding-bottom: 36px; }
+.chat-input .chat-input-box .chat-attach-btn { position: absolute; left: 6px; bottom: 6px; width: 28px; height: 28px; background: transparent; color: var(--text-sub, inherit); border: 0; }
+.chat-input .chat-input-box .chat-attach-btn:hover:not(:disabled) { background: #ffffff14; }
 .chat-attach { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px 0; border-top: 1px solid var(--line); }
 .chat-attach-item { position: relative; width: 56px; height: 56px; }
 .chat-attach-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 6px; border: 1px solid var(--line-strong); }

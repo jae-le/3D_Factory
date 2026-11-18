@@ -176,20 +176,22 @@ export function ChatPanel({ open, chat, onHover, onFocus }: Props) {
               e.target.value = ''
             }}
           />
-          <button type="button" className="chat-attach-btn" aria-label="이미지 붙이기" title="이미지 붙이기 (붙여넣기·끌어다 놓기도 됨, 3장까지)" disabled={state.sending || images.length >= MAX_IMAGES} onClick={() => fileInput.current?.click()}>
-            <Paperclip size={16} aria-hidden />
-          </button>
-          <textarea
-            aria-label="AI 에게 보낼 요청"
-            placeholder="예: Main Station 1 을 오른쪽으로 2m 옮겨줘 (Enter 보내기 · Shift+Enter 줄바꿈)"
-            value={text}
-            maxLength={2000}
-            rows={3}
-            disabled={state.sending}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={onKey}
-            onPaste={onPaste}
-          />
+          <div className="chat-input-box">
+            <textarea
+              aria-label="AI 에게 보낼 요청"
+              placeholder="예: Main Station 1 을 오른쪽으로 2m 옮겨줘 (Enter 보내기 · Shift+Enter 줄바꿈)"
+              value={text}
+              maxLength={2000}
+              rows={3}
+              disabled={state.sending}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={onKey}
+              onPaste={onPaste}
+            />
+            <button type="button" className="chat-attach-btn" aria-label="이미지 붙이기" title="이미지 붙이기 (붙여넣기·끌어다 놓기도 됨, 3장까지)" disabled={state.sending || images.length >= MAX_IMAGES} onClick={() => fileInput.current?.click()}>
+              <Paperclip size={16} aria-hidden />
+            </button>
+          </div>
           <button type="submit" aria-label="보내기" disabled={state.sending || (!text.trim() && images.length === 0)}>
             {state.sending ? <LoaderCircle size={16} className="spin" aria-hidden /> : <SendHorizontal size={16} aria-hidden />}
           </button>
