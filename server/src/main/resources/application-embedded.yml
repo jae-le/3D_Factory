@@ -1,0 +1,15 @@
+# 프로필 embedded — DB 설치 없이 바로 실행 (run.bat / run.sh)
+# PostgreSQL 17 을 앱 안에서 띄우고(.local/pgdata), 처음 켤 때 저장소의 db-snapshot/ 을 넣는다.
+# 경로는 server/ 폴더 기준. 처음 상태로 돌리려면 서버를 끄고 .local/ 을 지운다.
+spring:
+  web:
+    resources:
+      static-locations: file:${F3D_WEB_DIR:../web/dist}/,classpath:/static/ # 첫 화면(/) 용
+factory3d:
+  data-dir: ${F3D_DATA_DIR:../.local/data}
+  web-dir: ${F3D_WEB_DIR:../web/dist}
+  embedded-db:
+    dir: ${F3D_EMBEDDED_DB_DIR:../.local/pgdata}
+    port: ${F3D_EMBEDDED_DB_PORT:5434}
+  snapshot:
+    import-on-empty: true

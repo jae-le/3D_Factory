@@ -3,7 +3,31 @@
 2D 도면을 3D 공장으로 불러오고, 도면별 객체 배치 · 실시간 상황판 · 생산 동작 · AI 챗봇 · 관리자 기능을 갖춘 웹 플랫폼.
 설계: `docs/superpowers/specs/2026-11-12-factory3d-platform-design.md`
 
-## 준비 (한 번)
+## 바로 실행 (DB 설치 없이)
+받은 그대로 화면과 데이터(도면·3D 모델·배치·공정·변경 이력)를 볼 수 있습니다. 필요한 것: **Java 17+**, **Node 20+** 만 (PostgreSQL 설치 불필요).
+```
+git clone https://github.com/jae-le/3D_Factory.git
+cd 3D_Factory
+run.bat          # Windows   (macOS·Linux: sh run.sh)
+```
+- 화면을 빌드하고 서버를 켠 뒤 브라우저가 **http://localhost:8080** 을 엽니다. (처음 한 번은 Gradle·npm·PostgreSQL 받느라 몇 분 걸림)
+- 로그인: `admin` / `Factory3d1!` (운전원 계정 `test` 도 같은 비밀번호) — 첫 로그인 때 새 비밀번호로 바꿔야 합니다.
+- 내장 PostgreSQL 17 이 `.local/pgdata` (포트 5434), 업로드 파일이 `.local/data` 에 저장되어 껐다 켜도 이어집니다. 처음 켤 때만 저장소의 `db-snapshot/` 이 들어갑니다.
+- 처음 상태로 돌리기: 서버를 끄고 `.local/` 폴더를 지운 뒤 다시 `run.bat`.
+- AI 챗봇을 쓰려면 `F3D_AI_MASTER_KEY` 를 지정하고 관리자 › AI API 관리에서 API 키를 다시 등록하세요 (스냅샷에는 키가 들어가지 않습니다).
+- 화면을 고치며 개발: `run.bat` 을 켜 둔 채 `cd web && npm run dev` → http://localhost:5200 (바로 반영, `/api` 는 8080 으로).
+- 포트 바꾸기: `set F3D_PORT=8090` (DB 포트는 `F3D_EMBEDDED_DB_PORT`).
+
+### 지금 데이터를 저장소에 올리기 (스냅샷)
+다른 PC 에서도 같은 데이터로 이어가려면, 서버를 끄고:
+```
+scripts\snapshot-export.bat     # macOS·Linux: sh scripts/snapshot-export.sh
+git add db-snapshot && git commit -m "chore: DB 스냅샷 갱신"
+```
+`db-snapshot/data.sql`(표 행) + `db-snapshot/files/`(도면·모델 파일)로 내보냅니다. 공개 저장소용으로 비밀은 빠집니다: 모든 계정 비밀번호는 `Factory3d1!`(첫 로그인 때 변경)로 바뀌고, AI API 키·로그인 세션·로그인 기록·접속 IP 는 담지 않습니다.
+이미 `.local/` 이 있는 PC 는 새 스냅샷을 받으려면 `.local/` 을 지우고 다시 켜세요.
+
+## 준비 (설치한 PostgreSQL 로 개발할 때, 한 번)
 - Node 20+, Java 17+ (빌드는 17 이상이면 되고 Gradle 이 JDK 21 을 받아 줌), PostgreSQL 17 (localhost:5433)
 - jar 를 **실행**하려면 Java 21 이 필요합니다 (예: `~/.gradle/jdks` 아래 JDK)
 - DB·계정 만들기:

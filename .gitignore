@@ -5,3 +5,4 @@ build/
 /data/
 *.log
 web/e2e/shots/
+.local/

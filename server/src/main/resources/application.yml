@@ -44,3 +44,9 @@ factory3d:
   ai:
     fake: ${F3D_AI_FAKE:false}            # true = 가짜 게이트웨이(정해 둔 대본). 실제 Claude 를 부르지 않음 (테스트·화면 확인)
     master-key: ${F3D_AI_MASTER_KEY:}     # base64 32바이트 — API 키 암호화(AES-GCM). 없으면 키 등록 불가
+  # 개발용 DB 스냅샷 (저장소의 db-snapshot/) — README '바로 실행' 참고
+  snapshot:
+    dir: ${F3D_SNAPSHOT_DIR:../db-snapshot}
+    import-on-empty: false                    # 빈 DB 로 처음 켤 때 스냅샷 넣기 (프로필 embedded 에서 true)
+    export: false                             # true = 스냅샷 내보내고 끝냄 (scripts/snapshot-export)
+    user-password: ${F3D_SNAPSHOT_PASSWORD:Factory3d1!} # 스냅샷의 모든 계정 비밀번호 (첫 로그인 때 변경)
